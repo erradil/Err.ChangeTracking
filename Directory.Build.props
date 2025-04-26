@@ -1,0 +1,44 @@
+<Project>
+	<PropertyGroup>
+
+		<!-- Basic package metadata -->
+		<Authors>erradil</Authors>
+		<Company>err</Company>
+		<Copyright>Copyright © $([System.DateTime]::Now.Year)</Copyright>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageProjectUrl>https://github.com/erradil/Err.ChangeTracking</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/erradil/Err.ChangeTracking.git</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+
+		<!-- Build settings -->
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<IncludeBuildOutput>true</IncludeBuildOutput>
+		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<OutputType>Library</OutputType>
+		
+		<!-- Source link to enable debugging through NuGet packages -->
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
+
+		<!-- Deterministic builds in CI -->
+		<ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Source Link for GitHub -->
+		<PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All"/>
+		<PackageReference Include="Nerdbank.GitVersioning" Condition="!Exists('packages.config')" PrivateAssets="All"/>
+		
+	</ItemGroup>
+	
+	<ItemGroup>
+		<None Include="README.md" Pack="true" PackagePath="/"/>
+	</ItemGroup>
+</Project>

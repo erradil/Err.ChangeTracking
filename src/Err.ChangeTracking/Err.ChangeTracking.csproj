@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+
+
+		<RootNamespace>Err.ChangeTracking</RootNamespace>
+		<PackageId>Err.ChangeTracking</PackageId>
+		<Description>Lightweight runtime for change tracking POCO models at compile-time without reflection or proxies.</Description>
+		<PackageTags>ChangeTracking;Runtime;POCO;Performance;CSharp;AOT</PackageTags>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="System.Collections.Immutable" />
+	</ItemGroup>
+</Project>

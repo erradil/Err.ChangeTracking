@@ -1,0 +1,27 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/Err.ChangeTracking.Simple/Err.ChangeTracking.Simple.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="version.json" />
+  </Folder>
+  <Folder Name="/Solution Items/.github/" Id="bf8fdaac-1360-8f30-b285-60d9d37e7330" />
+  <Folder Name="/Solution Items/.github/workflows/" Id="844ea37f-fb6c-50a6-2124-643f6f5b2f36">
+    <File Path=".github/workflows/cd.yml" />
+    <File Path=".github/workflows/ci.yml" />
+  </Folder>
+  <Folder Name="/Solution Items/docs/" Id="7b439073-6f30-63b1-5eed-b07cc31cf721">
+    <File Path="docs/Readme.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Err.ChangeTracking.SourceGenerator/Err.ChangeTracking.SourceGenerator.csproj" />
+    <Project Path="src/Err.ChangeTracking/Err.ChangeTracking.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Err.ChangeTracking.Tests/Err.ChangeTracking.Tests.csproj" />
+  </Folder>
+</Solution>

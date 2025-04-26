@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+
+		<IsRoslynAnalyzer>true</IsRoslynAnalyzer>
+		<IncludeBuildOutput>false</IncludeBuildOutput>
+
+		<OutputItemType>Analyzer</OutputItemType>
+		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>		
+		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+		<CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
+		<RootNamespace>Err.ChangeTracking.SourceGenerator</RootNamespace>
+		<PackageId>Err.ChangeTracking.SourceGenerator</PackageId>
+		<Description>Source Generator for automatic change tracking on POCO models. Zero reflection, full compile-time optimization.</Description>
+		<PackageTags>SourceGenerator;ChangeTracking;Roslyn;CompileTime;Performance;AOT;CSharp</PackageTags>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/roslyn3.8/cs" />
+	</ItemGroup>
+
+	<!-- Roslyn SDK -->
+	<ItemGroup>
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
+	</ItemGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\Err.ChangeTracking\Err.ChangeTracking.csproj" />
+	</ItemGroup>
+</Project>

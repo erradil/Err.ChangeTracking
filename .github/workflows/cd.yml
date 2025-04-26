@@ -1,0 +1,44 @@
+name: CD
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.x
+
+      - name: Install Nerdbank.GitVersioning
+        run: |
+          dotnet tool install --global nbgv
+          export PATH="$PATH:$HOME/.dotnet/tools"
+
+      - name: Get version info
+        run: nbgv get-version
+
+      - name: Pack all projects in the solution
+        run: >
+          dotnet pack . --configuration Release
+          --include-symbols --symbol-package-format snupkg
+
+      - name: Push .nupkg packages
+        run: |
+          find . -name "*.nupkg" ! -name "*.snupkg" -exec dotnet nuget push {} \
+            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate \;
+
+      - name: Push .snupkg symbol packages
+        run: |
+          find . -name "*.snupkg" -exec dotnet nuget push {} \
+            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate \;
