@@ -1,0 +1,30 @@
+<Project>
+  <PropertyGroup>
+    <Authors>Err Team</Authors>
+    <Company>Err.ChangeTracking</Company>
+    <Copyright>Copyright © $(Company) $([System.DateTime]::Now.Year)</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/erradil/Err.ChangeTracking</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/erradil/Err.ChangeTracking</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    
+    <!-- Publish the repository URL in the built .nupkg -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    
+    <!-- Embed source files that are not tracked by the source control manager in the PDB -->
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    
+    <!-- Build symbol package (.snupkg) to distribute the PDB -->
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    
+    <!-- Deterministic builds -->
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)\docs\README.md" Pack="true" PackagePath="" Visible="false" />
+  </ItemGroup>
+</Project>

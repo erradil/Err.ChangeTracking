@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="Err.ChangeTracking/simples/Err.ChangeTracking.SampleDemo/Err.ChangeTracking.SampleDemo.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="Err.ChangeTracking/src/Err.ChangeTracking/Err.ChangeTracking.csproj" Type="Classic C#" />
+    <Project Path="Err.ChangeTracking/src/Err.ChangeTracking.SourceGenerator/Err.ChangeTracking.SourceGenerator.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="Err.ChangeTracking/tests/Err.ChangeTracking.SourceGenerator.Tests/Err.ChangeTracking.SourceGenerator.Tests.csproj" />
+  </Folder>
+</Solution>

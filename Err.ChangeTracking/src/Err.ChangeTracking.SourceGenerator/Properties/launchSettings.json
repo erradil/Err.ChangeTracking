@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "DebugRoslynSourceGenerator": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "../Err.ChangeTracking.SampleDemo/Err.ChangeTracking.SampleDemo.csproj"
+    }
+  }
+}

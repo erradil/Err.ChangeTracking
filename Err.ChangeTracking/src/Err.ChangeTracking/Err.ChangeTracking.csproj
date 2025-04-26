@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    
+    <PropertyGroup>
+        <TargetFrameworks>netstandard2.0;</TargetFrameworks>
+        <LangVersion>latest</LangVersion>
+        <Nullable>enable</Nullable>
+        <IsPackable>true</IsPackable>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+
+        <!-- NuGet package properties -->
+        <PackageId>Err.ChangeTracking</PackageId>
+        <Description>A library for tracking changes in objects and entities.</Description>
+        <PackageTags>changetracking;tracking;entity;dotnet;</PackageTags>
+   
+    </PropertyGroup>
+
+    <Import Project="../../../nuget.props" />
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
+    </ItemGroup>
+
+
+</Project>

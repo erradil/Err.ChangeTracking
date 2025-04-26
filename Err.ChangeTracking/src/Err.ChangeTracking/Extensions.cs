@@ -1,0 +1,25 @@
+﻿using System;
+using System.Collections.Generic;
+
+namespace Err.ChangeTracking;
+
+public static class Extensions
+{
+    public static T AsTrackable<T>(this T model)
+    {
+        if (model is ITrackable<T> trackable) trackable.GetChangeTracker().Enable();
+        return model;
+    }
+
+    public static TrackableDictionary<TKey, TValue> AsTrackable<TKey, TValue>(this Dictionary<TKey, TValue> dictionary)
+    {
+        if (dictionary is TrackableDictionary<TKey, TValue> trackable) return trackable;
+        throw new Exception("the dictionary is not TrackableDictionary<TKEY,TVALUE>.");
+    }
+
+    public static TrackableList<T> AsTrackable<T>(this List<T> collection)
+    {
+        if (collection is TrackableList<T> trackable) return trackable;
+        throw new Exception("the collection is not TrackableList<T>.");
+    }
+}
