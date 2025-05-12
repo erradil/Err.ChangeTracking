@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   publish:
@@ -26,21 +27,27 @@ jobs:
       - name: Get version info
         run: nbgv get-version
 
-      - name: Pack all projects in the solution
-        run: >
-          dotnet pack . --configuration Release
-          --include-symbols --symbol-package-format snupkg
+      # Step 1: Build first
+      - name: Build solution
+        run: dotnet build --configuration Release
 
-      - name: Push .nupkg packages
+      # Step 2: Then pack
+      - name: Pack projects
+        run: dotnet pack --configuration Release --no-build --include-symbols -p:SymbolPackageFormat=snupkg
+
+      # Push packages
+      - name: Push NuGet packages
         run: |
-          find . -name "*.nupkg" ! -name "*.snupkg" -exec dotnet nuget push {} \
+          find . -name "*.nupkg" ! -name "*.symbols.nupkg" -exec dotnet nuget push {} \
             --api-key ${{ secrets.NUGET_API_KEY }} \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate \;
 
-      - name: Push .snupkg symbol packages
+      # Push symbol packages
+      - name: Push symbol packages
         run: |
           find . -name "*.snupkg" -exec dotnet nuget push {} \
             --api-key ${{ secrets.NUGET_API_KEY }} \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate \;
+      
