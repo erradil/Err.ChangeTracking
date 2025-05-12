@@ -5,7 +5,9 @@ internal partial record Employee
 {
     public partial string Name { get; set; }
     protected static partial int? Age { get; set; }
-    [Trackable] public partial struct Address
+
+    [Trackable]
+    public partial struct Address
     {
         public partial string City { get; set; }
         public partial string Zipcode { get; set; }
