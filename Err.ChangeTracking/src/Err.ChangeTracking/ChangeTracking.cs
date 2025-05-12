@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 
 namespace Err.ChangeTracking;
 
-internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEntity>
+public class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEntity>
 {
     private static readonly Lazy<Dictionary<string, Action<TEntity, object?>>> PropertySetters = new(BuildPropertySetters);
 
