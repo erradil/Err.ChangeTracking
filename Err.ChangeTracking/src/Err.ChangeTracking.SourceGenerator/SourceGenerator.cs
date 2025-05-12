@@ -12,10 +12,14 @@ namespace Err.ChangeTracking.SourceGenerator
     [Generator]
     public class PartialPropertyGenerator : IIncrementalGenerator
     {
-        private const string TrackableAttributeFullName = "Err.ChangeTracking.TrackableAttribute";
-        private const string TrackableInterfaceFullName = "Err.ChangeTracking.ITrackable";
-        private const string ChangeTrackingInterfaceFullName = "Err.ChangeTracking.IChangeTracking";
-        private const string ChangeTrackingClassFullName = "Err.ChangeTracking.ChangeTracking";
+        private const string Namespace = "Err.ChangeTracking";
+        private const string TrackableAttributeFullName = $"{Namespace}.TrackableAttribute";
+        private const string ITrackableFullName = $"{Namespace}.ITrackable";
+        private const string IChangeTrackingFullName = $"{Namespace}.IChangeTracking";
+        private const string ChangeTrackingFullName = $"{Namespace}.ChangeTracking";
+        private const string TrackCollectionAttributeFullName = $"{Namespace}.TrackCollectionAttribute";
+        private const string TrackableListFullName = $"{Namespace}.TrackableList";
+        private const string TrackableDictionaryFullName = $"{Namespace}.TrackableDictionary";
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
@@ -137,7 +141,7 @@ namespace Err.ChangeTracking.SourceGenerator
         {
             foreach (var interfaceSymbol in typeSymbol.AllInterfaces)
             {
-                if (interfaceSymbol.OriginalDefinition.ToDisplayString().StartsWith(TrackableInterfaceFullName))
+                if (interfaceSymbol.OriginalDefinition.ToDisplayString().StartsWith(ITrackableFullName))
                 {
                     return true;
                 }
@@ -172,6 +176,11 @@ namespace Err.ChangeTracking.SourceGenerator
             public Accessibility GetterAccessibility { get; }
             public Accessibility SetterAccessibility { get; }
 
+            // Collection tracking information
+            public bool IsCollection { get; }
+            public string? TrackableCollectionType { get; }
+            public bool IsNullable { get; }
+
             public PropertyInfo(IPropertySymbol propertySymbol)
             {
                 Name = propertySymbol.Name;
@@ -194,6 +203,59 @@ namespace Err.ChangeTracking.SourceGenerator
                     HasGetter ? propertySymbol.GetMethod!.DeclaredAccessibility : Accessibility.NotApplicable;
                 SetterAccessibility =
                     HasSetter ? propertySymbol.SetMethod!.DeclaredAccessibility : Accessibility.NotApplicable;
+                // Check if the type is nullable
+                IsNullable = propertySymbol.Type.NullableAnnotation == NullableAnnotation.Annotated;
+
+                // Check if this is a trackable collection
+                var collectionInfo = GetTrackableCollectionInfo(propertySymbol);
+                IsCollection = collectionInfo.IsCollection;
+                TrackableCollectionType = collectionInfo.TrackableType;
+            }
+
+
+            /// <summary>
+            ///     Check if a property has the [TrackCollection] attribute
+            /// </summary>
+            private static bool HasTrackCollectionAttribute(IPropertySymbol propertySymbol)
+            {
+                foreach (var attribute in propertySymbol.GetAttributes())
+                    if (attribute.AttributeClass?.ToDisplayString() == TrackCollectionAttributeFullName)
+                        return true;
+
+                return false;
+            }
+
+            /// <summary>
+            ///     Check if a property type is a collection that should be converted to a trackable version
+            /// </summary>
+            private static (bool IsCollection, string TrackableType) GetTrackableCollectionInfo(
+                IPropertySymbol property)
+            {
+                if (!HasTrackCollectionAttribute(property))
+                    return (false, string.Empty);
+
+                var propertyType = property.Type;
+
+
+                // Check for List<T>
+                if (propertyType is INamedTypeSymbol listType &&
+                    listType.OriginalDefinition.ToDisplayString() == "System.Collections.Generic.List<T>")
+                {
+                    var elementType = listType.TypeArguments[0].ToDisplayString();
+                    return (true, $"{TrackableListFullName}<{elementType}>");
+                }
+
+                // Check for Dictionary<K,V>
+                if (propertyType is INamedTypeSymbol dictType &&
+                    dictType.OriginalDefinition.ToDisplayString() ==
+                    "System.Collections.Generic.Dictionary<TKey, TValue>")
+                {
+                    var keyType = dictType.TypeArguments[0].ToDisplayString();
+                    var valueType = dictType.TypeArguments[1].ToDisplayString();
+                    return (true, $"{TrackableDictionaryFullName}<{keyType}, {valueType}>");
+                }
+
+                return (false, string.Empty);
             }
         }
 
@@ -294,7 +356,7 @@ namespace Err.ChangeTracking.SourceGenerator
                 }
             }
 
-            // <summary>
+            /// <summary>
             /// Returns the fully qualified name of the type including namespace and any containing types
             /// </summary>
             public string GetFullName()
@@ -377,7 +439,7 @@ namespace Err.ChangeTracking.SourceGenerator
         /// </summary>
         private static string GetContainingTypeNames(TypeInfo typeInfo)
         {
-            if (typeInfo.ContainingTypes == null || typeInfo.ContainingTypes.Count == 0)
+            if (typeInfo.ContainingTypes.Count == 0)
                 return string.Empty;
 
             return string.Join(".", typeInfo.ContainingTypes);
@@ -429,7 +491,7 @@ namespace Err.ChangeTracking.SourceGenerator
             // Add the ITrackable<T> interface if not already implemented
             string qualifiedTypeName = typeInfo.Name;
             var interfaceImplementation = !alreadyImplementsTrackable
-                ? $" : {TrackableInterfaceFullName}<{qualifiedTypeName}>"
+                ? $" : {ITrackableFullName}<{qualifiedTypeName}>"
                 : "";
 
             sourceBuilder.AppendLine(
@@ -492,7 +554,7 @@ namespace Err.ChangeTracking.SourceGenerator
 
             // Add the ITrackable<T> interface if not already implemented
             var interfaceImplementation = !alreadyImplementsTrackable
-                ? $" : {TrackableInterfaceFullName}<{qualifiedTypeName}>"
+                ? $" : {ITrackableFullName}<{qualifiedTypeName}>"
                 : "";
 
             sourceBuilder.AppendLine($"{typeIndent}// Auto-generated for {typeInfo.Name} due to [TrackableAttribute]");
@@ -508,9 +570,9 @@ namespace Err.ChangeTracking.SourceGenerator
                 string memberIndent = new string(' ', indent * 4);
 
                 sourceBuilder.AppendLine(
-                    $"{memberIndent}private {ChangeTrackingInterfaceFullName}<{qualifiedTypeName}>? _changeTracker;");
+                    $"{memberIndent}private {IChangeTrackingFullName}<{qualifiedTypeName}>? _changeTracker;");
                 sourceBuilder.AppendLine(
-                    $"{memberIndent}public {ChangeTrackingInterfaceFullName}<{qualifiedTypeName}> GetChangeTracker() => _changeTracker ??= new {ChangeTrackingClassFullName}<{qualifiedTypeName}>(this);");
+                    $"{memberIndent}public {IChangeTrackingFullName}<{qualifiedTypeName}> GetChangeTracker() => _changeTracker ??= new {ChangeTrackingFullName}<{qualifiedTypeName}>(this);");
                 sourceBuilder.AppendLine();
             }
 
@@ -536,11 +598,16 @@ namespace Err.ChangeTracking.SourceGenerator
         {
             string indent = new string(' ', indentLevel * 4);
             string fieldIndent = new string(' ', (indentLevel + 1) * 4);
+            var codeIndent = new string(' ', (indentLevel + 2) * 4);
 
-            // Generate backing field
+            var nullableAnnotation = property.IsNullable ? "?" : "";
+
+            // Generate backing field with appropriate type
             string staticModifier = property.IsStatic ? "static " : "";
-            sourceBuilder.AppendLine(
-                $"{indent}private {staticModifier}{property.TypeName} {property.BackingFieldName};");
+            var fieldType = property.IsCollection
+                ? $"{property.TrackableCollectionType}{nullableAnnotation}"
+                : property.TypeName;
+            sourceBuilder.AppendLine($"{indent}private {staticModifier}{fieldType} {property.BackingFieldName};");
 
             // Build property modifiers
             List<string> modifiers = new List<string>
@@ -593,14 +660,29 @@ namespace Err.ChangeTracking.SourceGenerator
                     // Only add change tracking for non-static properties
                     if (!property.IsStatic)
                     {
-                        sourceBuilder.Append(
-                            $" _changeTracker?.RecordChange(\"{property.Name}\", {property.BackingFieldName}, value);");
-                        sourceBuilder.Append($" {property.BackingFieldName} = value;");
+                        // Special handling for collection properties
+                        if (property.IsCollection)
+                        {
+                            sourceBuilder.Append(
+                                $" _changeTracker?.RecordChange(nameof({property.Name}), {property.BackingFieldName}, value);");
+                            sourceBuilder.Append(
+                                $" {property.BackingFieldName} = value != null ? new {property.TrackableCollectionType}(value) : null;");
+                        }
+                        else
+                        {
+                            sourceBuilder.Append(
+                                $" _changeTracker?.RecordChange(nameof({property.Name}), {property.BackingFieldName}, value);");
+                            sourceBuilder.Append($" {property.BackingFieldName} = value;");
+                        }
                     }
                     else
                     {
                         // For static properties, simply set the value without change tracking
-                        sourceBuilder.Append($" {property.BackingFieldName} = value;");
+                        if (property.IsCollection)
+                            sourceBuilder.Append(
+                                $" {property.BackingFieldName} = value != null ? new {property.TrackableCollectionType}(value) : null;");
+                        else
+                            sourceBuilder.Append($" {property.BackingFieldName} = value;");
                     }
 
                     sourceBuilder.AppendLine(" }");
@@ -621,9 +703,9 @@ namespace Err.ChangeTracking.SourceGenerator
         private static void GenerateTrackableImplementation(StringBuilder sourceBuilder, string qualifiedTypeName)
         {
             sourceBuilder.AppendLine(
-                $"    private {ChangeTrackingInterfaceFullName}<{qualifiedTypeName}>? _changeTracker;");
+                $"    private {IChangeTrackingFullName}<{qualifiedTypeName}>? _changeTracker;");
             sourceBuilder.AppendLine(
-                $"    public {ChangeTrackingInterfaceFullName}<{qualifiedTypeName}> GetChangeTracker() => _changeTracker ??= new {ChangeTrackingClassFullName}<{qualifiedTypeName}>(this);");
+                $"    public {IChangeTrackingFullName}<{qualifiedTypeName}> GetChangeTracker() => _changeTracker ??= new {ChangeTrackingFullName}<{qualifiedTypeName}>(this);");
             sourceBuilder.AppendLine();
         }
 
@@ -632,9 +714,13 @@ namespace Err.ChangeTracking.SourceGenerator
         /// </summary>
         private static void GeneratePropertyImplementation(StringBuilder sourceBuilder, PropertyInfo property)
         {
-            // Generate backing field
+            // Generate backing field with appropriate type
+            var nullableAnnotation = property.IsNullable ? "?" : "";
             string staticModifier = property.IsStatic ? "static " : "";
-            sourceBuilder.AppendLine($"    private {staticModifier}{property.TypeName} {property.BackingFieldName};");
+            var fieldType = property.IsCollection
+                ? $"{property.TrackableCollectionType}{nullableAnnotation}"
+                : property.TypeName;
+            sourceBuilder.AppendLine($"    private {staticModifier}{fieldType} {property.BackingFieldName};");
 
             // Build property modifiers
             List<string> modifiers = new List<string>
@@ -656,28 +742,23 @@ namespace Err.ChangeTracking.SourceGenerator
             // Generate getter if present
             if (property.HasGetter)
             {
-                string getterAccessibility = property.GetterAccessibility != property.PropertyAccessibility
+                var getterAccessibility = property.GetterAccessibility != property.PropertyAccessibility
                     ? $"{GetAccessibilityAsString(property.GetterAccessibility)} "
                     : "";
 
-                if (!property.IsAbstract)
-                {
-                    sourceBuilder.AppendLine($"        {getterAccessibility}get => {property.BackingFieldName};");
-                }
-                else
-                {
-                    sourceBuilder.AppendLine($"        {getterAccessibility}get;");
-                }
+                sourceBuilder.AppendLine(!property.IsAbstract
+                    ? $"        {getterAccessibility}get => {property.BackingFieldName};"
+                    : $"        {getterAccessibility}get;");
             }
 
             // Generate setter if present
             if (property.HasSetter)
             {
-                string setterAccessibility = property.SetterAccessibility != property.PropertyAccessibility
+                var setterAccessibility = property.SetterAccessibility != property.PropertyAccessibility
                     ? $"{GetAccessibilityAsString(property.SetterAccessibility)} "
                     : "";
 
-                string accessorKeyword = property.IsSetterInitOnly ? "init" : "set";
+                var accessorKeyword = property.IsSetterInitOnly ? "init" : "set";
 
                 if (!property.IsAbstract)
                 {
@@ -688,20 +769,25 @@ namespace Err.ChangeTracking.SourceGenerator
                     if (!property.IsStatic)
                     {
                         sourceBuilder.Append(
-                            $" _changeTracker?.RecordChange(\"{property.Name}\", {property.BackingFieldName}, value);");
-                        sourceBuilder.Append($" {property.BackingFieldName} = value;");
+                            $" _changeTracker?.RecordChange(nameof({property.Name}), {property.BackingFieldName}, value);");
+                        // Special handling for collection properties
+                        sourceBuilder.Append(property.IsCollection
+                            ? $" {property.BackingFieldName} = value != null ? new {property.TrackableCollectionType}(value) : null;"
+                            : $" {property.BackingFieldName} = value;");
                     }
                     else
                     {
                         // For static properties, simply set the value without change tracking
-                        sourceBuilder.Append($" {property.BackingFieldName} = value;");
+                        sourceBuilder.Append(property.IsCollection
+                            ? $" {property.BackingFieldName} = value != null ? new {property.TrackableCollectionType}(value) : null;"
+                            : $" {property.BackingFieldName} = value;");
                     }
 
                     sourceBuilder.AppendLine(" }");
                 }
                 else
                 {
-                    sourceBuilder.AppendLine($"{setterAccessibility}{accessorKeyword};");
+                    sourceBuilder.AppendLine($"        {setterAccessibility}{accessorKeyword};");
                 }
             }
 

@@ -19,6 +19,16 @@ public class TrackableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, ITrac
         _hasStructuralChanges ||
         Values.OfType<ITrackable<TValue>>().Any(x => x.GetChangeTracker().IsDirty);
 
+    public new TValue this[TKey key]
+    {
+        get => base[key].AsTrackable();
+        set
+        {
+            _hasStructuralChanges = true;
+            base[key] = Wrap(value);
+        }
+    }
+
     public new void Add(TKey key, TValue value)
     {
         _hasStructuralChanges = true;

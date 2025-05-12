@@ -6,6 +6,8 @@ internal partial record Employee
     public partial string Name { get; set; }
     protected static partial int? Age { get; set; }
 
+    [TrackCollection] public partial List<string>? Items { get; set; }
+
     [Trackable]
     public partial struct Address
     {

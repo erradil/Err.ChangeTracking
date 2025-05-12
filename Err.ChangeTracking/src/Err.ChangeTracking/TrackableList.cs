@@ -19,6 +19,16 @@ public class TrackableList<T> : List<T>, ITrackableCollection
         _hasStructuralChanges ||
         this.OfType<ITrackable<T>>().Any(x => x.GetChangeTracker().IsDirty);
 
+    public new T this[int index]
+    {
+        get => base[index].AsTrackable();
+        set
+        {
+            _hasStructuralChanges = true;
+            base[index] = Wrap(value);
+        }
+    }
+
     public new void Add(T item)
     {
         _hasStructuralChanges = true;

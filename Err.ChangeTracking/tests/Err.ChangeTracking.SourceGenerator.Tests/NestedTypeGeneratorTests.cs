@@ -1,5 +1,4 @@
-using System;
-using System.Linq;
+using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
@@ -9,47 +8,47 @@ namespace Err.ChangeTracking.SourceGenerator.Tests
     public class NestedTypeGeneratorTests
     {
         private const string EmployeeClassText = """
-                                                namespace Err.ChangeTracking.SampleDemo;
+                                                 namespace Err.ChangeTracking.SampleDemo;
 
-                                                [Trackable]
-                                                internal partial record Employee
-                                                {
-                                                    public partial string Name { get; set; }
-                                                    protected static partial int? Age { get; set; }
-                                                    [Trackable] public partial struct Address
-                                                    {
-                                                        public partial string City { get; set; }
-                                                        public partial string Zipcode { get; set; }
-                                                    }
-                                                }
-                                                """;
+                                                 [Trackable]
+                                                 internal partial record Employee
+                                                 {
+                                                     public partial string Name { get; set; }
+                                                     protected static partial int? Age { get; set; }
+                                                     [Trackable] public partial struct Address
+                                                     {
+                                                         public partial string City { get; set; }
+                                                         public partial string Zipcode { get; set; }
+                                                     }
+                                                 }
+                                                 """;
 
         private const string ExpectedEmployeeGeneratedText = """
-                                                            #nullable enable
-                                                            namespace Err.ChangeTracking.SampleDemo;
+                                                             #nullable enable
+                                                             namespace Err.ChangeTracking.SampleDemo;
 
-                                                            // Auto-generated for Employee due to [TrackableAttribute]
-                                                            internal partial record Employee : Err.ChangeTracking.ITrackable<Employee>
-                                                            {
-                                                                private Err.ChangeTracking.IChangeTracking<Employee>? _changeTracker;
-                                                                public Err.ChangeTracking.IChangeTracking<Employee> GetChangeTracker() => _changeTracker ??= new Err.ChangeTracking.ChangeTracking<Employee>(this);
+                                                             // Auto-generated for Employee due to [TrackableAttribute]
+                                                             internal partial record Employee : Err.ChangeTracking.ITrackable<Employee>
+                                                             {
+                                                                 private Err.ChangeTracking.IChangeTracking<Employee>? _changeTracker;
+                                                                 public Err.ChangeTracking.IChangeTracking<Employee> GetChangeTracker() => _changeTracker ??= new Err.ChangeTracking.ChangeTracking<Employee>(this);
 
-                                                                private string _name;
-                                                                public partial string Name
-                                                                {
-                                                                    get => _name;
-                                                                    set { _changeTracker?.RecordChange("Name", _name, value); _name = value; }
-                                                                }
+                                                                 private string _name;
+                                                                 public partial string Name
+                                                                 {
+                                                                     get => _name;
+                                                                     set { _changeTracker?.RecordChange("Name", _name, value); _name = value; }
+                                                                 }
 
-                                                                private static int? _age;
-                                                                protected static partial int? Age
-                                                                {
-                                                                    get => _age;
-                                                                    set { _age = value; }
-                                                                }
+                                                                 private static int? _age;
+                                                                 protected static partial int? Age
+                                                                 {
+                                                                     get => _age;
+                                                                     set { _age = value; }
+                                                                 }
 
-                                                            }
-                                                            """;
+                                                             }
+                                                             """;
 
         private const string ExpectedAddressGeneratedText = """
                                                             #nullable enable
@@ -83,30 +82,30 @@ namespace Err.ChangeTracking.SourceGenerator.Tests
 
         // Minimal Trackable attribute implementation for testing
         private const string TrackableAttributeText = """
-                                                     namespace Err.ChangeTracking
-                                                     {
-                                                         [System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct)]
-                                                         public class TrackableAttribute : System.Attribute
-                                                         {
-                                                         }
+                                                      namespace Err.ChangeTracking
+                                                      {
+                                                          [System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct)]
+                                                          public class TrackableAttribute : System.Attribute
+                                                          {
+                                                          }
 
-                                                         public interface ITrackable<T>
-                                                         {
-                                                             IChangeTracking<T> GetChangeTracker();
-                                                         }
+                                                          public interface ITrackable<T>
+                                                          {
+                                                              IChangeTracking<T> GetChangeTracker();
+                                                          }
 
-                                                         public interface IChangeTracking<T>
-                                                         {
-                                                             void RecordChange(string propertyName, object? oldValue, object? newValue);
-                                                         }
+                                                          public interface IChangeTracking<T>
+                                                          {
+                                                              void RecordChange(string propertyName, object? oldValue, object? newValue);
+                                                          }
 
-                                                         public class ChangeTracking<T> : IChangeTracking<T>
-                                                         {
-                                                             public ChangeTracking(T entity) { }
-                                                             public void RecordChange(string propertyName, object? oldValue, object? newValue) { }
-                                                         }
-                                                     }
-                                                     """;
+                                                          public class ChangeTracking<T> : IChangeTracking<T>
+                                                          {
+                                                              public ChangeTracking(T entity) { }
+                                                              public void RecordChange(string propertyName, object? oldValue, object? newValue) { }
+                                                          }
+                                                      }
+                                                      """;
 
         [Fact]
         public void GenerateEmployeeRecord()
@@ -132,7 +131,7 @@ namespace Err.ChangeTracking.SourceGenerator.Tests
 
             // Verify nested Address struct was properly generated
             var addressGeneratedTree = runResult.GeneratedTrees
-                .FirstOrDefault(t => t.FilePath.EndsWith("Err.ChangeTracking.SampleDemo.Address.g.cs"));
+                .FirstOrDefault(t => t.FilePath.EndsWith("Err.ChangeTracking.SampleDemo.Employee.Address.g.cs"));
 
             Assert.NotNull(addressGeneratedTree);
             //Assert.Equal(ExpectedAddressGeneratedText, addressGeneratedTree.GetText().ToString(), ignoreLineEndingDifferences: true, ignoreWhiteSpaceDifferences:true);
@@ -149,7 +148,7 @@ namespace Err.ChangeTracking.SourceGenerator.Tests
                     // References required for compilation
                     MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
                     MetadataReference.CreateFromFile(typeof(Attribute).Assembly.Location),
-                    MetadataReference.CreateFromFile(typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute).Assembly.Location)
+                    MetadataReference.CreateFromFile(typeof(CompilerGeneratedAttribute).Assembly.Location)
                 ],
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
         }
