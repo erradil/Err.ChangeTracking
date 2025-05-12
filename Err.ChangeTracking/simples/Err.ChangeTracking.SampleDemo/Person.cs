@@ -1,10 +1,10 @@
 namespace Err.ChangeTracking.SampleDemo;
 
-[Trackable]
+[Trackable(Mode = TrackingMode.OnlyMarked)]
 internal partial record Employee
 {
-    public partial string Name { get; set; }
-    protected static partial int? Age { get; set; }
+    [TrackOnly] public partial string Name { get; set; }
+    [TrackOnly] protected static partial int? Age { get; set; }
 
     [TrackCollection] public partial List<string>? Items { get; set; }
 

@@ -23,7 +23,7 @@ public partial class Model : ITrackable<Model>
         get => _name;
         set
         {
-            _changeTracker?.RecordChange("Name", _name, value);
+            _changeTracker?.RecordChange(nameof(Name), _name, value);
             _name = value;
         }
     }

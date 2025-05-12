@@ -20,6 +20,8 @@ namespace Err.ChangeTracking.SourceGenerator
         private const string TrackCollectionAttributeFullName = $"{Namespace}.TrackCollectionAttribute";
         private const string TrackableListFullName = $"{Namespace}.TrackableList";
         private const string TrackableDictionaryFullName = $"{Namespace}.TrackableDictionary";
+        private const string TrackOnlyAttributeFullName = $"{Namespace}.TrackOnlyAttribute";
+        private const string NotTrackedAttributeFullName = $"{Namespace}.NotTrackedAttribute";
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
@@ -115,23 +117,109 @@ namespace Err.ChangeTracking.SourceGenerator
         }
 
         /// <summary>
-        /// Find all partial properties in a type declaration
+        /// Find all trackable partial properties in a type declaration based on tracking rules
         /// </summary>
         private static IEnumerable<(PropertyDeclarationSyntax Syntax, IPropertySymbol Symbol)> GetTrackableProperties(
             TypeDeclarationSyntax typeSyntax, SemanticModel semanticModel)
         {
+            // Get tracking mode from type
+            var typeSymbol = semanticModel.GetDeclaredSymbol(typeSyntax);
+            var trackingMode = GetTrackingMode(typeSymbol);
+
             foreach (var member in typeSyntax.Members)
             {
-                if (member is PropertyDeclarationSyntax propertySyntax &&
-                    propertySyntax.Modifiers.Any(SyntaxKind.PartialKeyword))
+                // Only process partial properties
+                if (member is not PropertyDeclarationSyntax propertySyntax ||
+                    !propertySyntax.Modifiers.Any(SyntaxKind.PartialKeyword))
                 {
-                    var propertySymbol = semanticModel.GetDeclaredSymbol(propertySyntax);
-                    if (propertySymbol != null)
-                    {
-                        yield return (propertySyntax, propertySymbol);
-                    }
+                    continue;
+                }
+
+                var propertySymbol = semanticModel.GetDeclaredSymbol(propertySyntax);
+                if (propertySymbol == null) continue;
+
+                // Check tracking attributes
+                var isTrackOnly = HasAttribute(propertySymbol, TrackOnlyAttributeFullName);
+                var isNotTracked = HasAttribute(propertySymbol, NotTrackedAttributeFullName);
+
+                // Check if already a trackable collection
+                var isTrackableCollection = IsTrackableCollection(propertySymbol);
+
+                // Determine if this property should be tracked
+                var isTrackable = !isNotTracked ||
+                                  isTrackableCollection ||
+                                  trackingMode != TrackingMode.OnlyMarked || isTrackOnly;
+
+                // Skip if not trackable
+                if (!isTrackable) continue;
+
+                yield return (propertySyntax, propertySymbol);
+            }
+        }
+
+        /// <summary>
+        ///     Check if a type is already a trackable collection
+        /// </summary>
+        private static bool IsTrackableCollection(IPropertySymbol propertySymbol)
+        {
+            var typeName = propertySymbol.Type.ToDisplayString();
+
+            // No need to track the types is TrackableList or TrackableDictionary, they are by default trackable
+            if (typeName.StartsWith(TrackableListFullName) ||
+                typeName.StartsWith(TrackableDictionaryFullName))
+                return false;
+            // Check if the property has TrackCollectionAttribute
+            var isTrackCollection = HasAttribute(propertySymbol, TrackCollectionAttributeFullName);
+
+            return isTrackCollection
+                   && (typeName.StartsWith("System.Collections.Generic.List<T>") ||
+                       typeName.StartsWith("System.Collections.Generic.Dictionary<TKey, TValue>"));
+        }
+
+        /// <summary>
+        ///     Get tracking mode from the [Trackable] attribute
+        /// </summary>
+        private static TrackingMode GetTrackingMode(INamedTypeSymbol? typeSymbol)
+        {
+            if (typeSymbol == null) return TrackingMode.All; // Default
+
+            foreach (var attribute in typeSymbol.GetAttributes())
+                if (attribute.AttributeClass?.ToDisplayString() == TrackableAttributeFullName)
+                {
+                    // Check if attribute has constructor arguments for tracking mode
+                    if (attribute.NamedArguments.FirstOrDefault(kvp => kvp.Key == "Mode").Value.Value is int
+                        trackingModeValue)
+                        return (TrackingMode)trackingModeValue;
+
+                    break;
+                }
+
+            return TrackingMode.All; // Default if not specified
+        }
+
+        /// <summary>
+        ///     Check if a property has a specific attribute
+        /// </summary>
+        private static bool HasAttribute(IPropertySymbol propertySymbol, string attributeFullName)
+        {
+            foreach (var attribute in propertySymbol.GetAttributes())
+            {
+                if (attribute.AttributeClass?.ToDisplayString() == attributeFullName)
+                {
+                    return true;
                 }
             }
+
+            return false;
+        }
+
+        /// <summary>
+        ///     Tracking modes supported by [Trackable] attribute adil
+        /// </summary>
+        private enum TrackingMode
+        {
+            All,
+            OnlyMarked
         }
 
         /// <summary>
