@@ -45,7 +45,6 @@ public class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEntity
 
         _originalValues ??= [];
 
-        //_originalValues.TryAdd(propertyName, currentValue);
         if (_originalValues.TryGetValue(propertyName, out var originalValue))
         {
             if (EqualityComparer<TProperty?>.Default.Equals(currentValue, (TProperty?)originalValue))

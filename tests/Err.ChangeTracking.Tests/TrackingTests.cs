@@ -103,6 +103,7 @@ public class CollectionTrackingTests
 
         // Assert - The change should be detected in the collection
         Assert.True(model.NestedItems?.AsTrackable().IsDirty);
+        Assert.True(model.NestedItems![0].GetChangeTracker().IsDirty);
     }
 
     [Fact]
@@ -206,8 +207,8 @@ public class CollectionTrackingTests
         {
             ConfigItems = new Dictionary<string, NestedItem>
             {
-                { "Item1", new NestedItem { Name = "Config 1" }.AsTrackable() },
-                { "Item2", new NestedItem { Name = "Config 2" }.AsTrackable() }
+                { "Item1", new NestedItem { Name = "Config 1" } },
+                { "Item2", new NestedItem { Name = "Config 2" } }
             }
         }.AsTrackable();
 
@@ -324,9 +325,9 @@ public class CollectionTrackingTests
         Assert.Equal("Test Model", model.Name);
         Assert.Equal(2, model.Items?.Count);
         Assert.Equal(2, model.Properties?.Count);
-        Assert.Contains("Item 1", model.Items);
-        Assert.Contains("Item 2", model.Items);
-        Assert.True(model.Properties.ContainsKey("Prop1"));
+        Assert.Contains("Item 1", model.Items!);
+        Assert.Contains("Item 2", model.Items!);
+        Assert.True(model.Properties!.ContainsKey("Prop1"));
         Assert.False(model.GetChangeTracker().IsDirty);
     }
 

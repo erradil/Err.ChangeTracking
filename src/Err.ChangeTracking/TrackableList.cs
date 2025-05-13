@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Err.ChangeTracking;
 
-public class TrackableList<T> : List<T>, ITrackableCollection
+public class TrackableList<T> : List<T>, ITrackableCollection, IEnumerable<T>
+
 {
     private bool _hasStructuralChanges;
 
@@ -11,9 +13,12 @@ public class TrackableList<T> : List<T>, ITrackableCollection
     {
     }
 
-    public TrackableList(IEnumerable<T> items) : base(items)
+    public TrackableList(IEnumerable<T> items)
     {
+        if (items == null) return;
+        foreach (var item in items) base.Add(item.AsTrackable());
     }
+
 
     public bool IsDirty =>
         _hasStructuralChanges ||
@@ -25,20 +30,20 @@ public class TrackableList<T> : List<T>, ITrackableCollection
         set
         {
             _hasStructuralChanges = true;
-            base[index] = Wrap(value);
+            base[index] = value.AsTrackable();
         }
     }
 
     public new void Add(T item)
     {
         _hasStructuralChanges = true;
-        base.Add(Wrap(item));
+        base.Add(item.AsTrackable());
     }
 
     public new void AddRange(IEnumerable<T> items)
     {
         _hasStructuralChanges = true;
-        base.AddRange(items.Select(Wrap));
+        base.AddRange(items.Select(i => i.AsTrackable()));
     }
 
     public new bool Remove(T item)
@@ -59,8 +64,15 @@ public class TrackableList<T> : List<T>, ITrackableCollection
         base.Clear();
     }
 
-    private static T Wrap(T item)
+    // Override the GetEnumerator methods to wrap each item with AsTrackable
+    public new IEnumerator<T> GetEnumerator()
     {
-        return item.AsTrackable(); // Auto-enable item tracking on add
+        for (var i = 0; i < Count; i++) yield return base[i].AsTrackable();
+    }
+
+    // Implement the non-generic IEnumerable.GetEnumerator
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return GetEnumerator();
     }
 }
