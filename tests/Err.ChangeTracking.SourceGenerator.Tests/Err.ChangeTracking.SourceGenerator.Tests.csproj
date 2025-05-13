@@ -27,7 +27,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\src\Err.ChangeTracking.SourceGenerator\Err.ChangeTracking.SourceGenerator.csproj" />
+        <ProjectReference Include="..\..\src\Err.ChangeTracking.SourceGenerator\Err.ChangeTracking.SourceGenerator.csproj"/>
     </ItemGroup>
 
 </Project>

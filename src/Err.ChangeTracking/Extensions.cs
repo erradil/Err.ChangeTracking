@@ -18,7 +18,7 @@ public static class Extensions
         if (dictionary is TrackableDictionary<TKey, TValue> trackable)
             return trackable;
 
-        throw new Exception("the dictionary is not TrackableDictionary<TKEY,TVALUE>.");
+        throw new Exception("the dictionary is not TrackableDictionary<TKey,TValue>.");
     }
 
     public static TrackableList<T> AsTrackable<T>(this List<T> collection)

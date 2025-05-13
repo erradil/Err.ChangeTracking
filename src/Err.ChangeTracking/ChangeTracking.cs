@@ -6,7 +6,8 @@ namespace Err.ChangeTracking;
 
 public class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEntity>
 {
-    private static readonly Lazy<Dictionary<string, Action<TEntity, object?>>> PropertySetters = new(BuildPropertySetters);
+    private static readonly Lazy<Dictionary<string, Action<TEntity, object?>>> PropertySetters =
+        new(BuildPropertySetters);
 
     private static readonly IReadOnlyDictionary<string, object?> _emptyChanges = new Dictionary<string, object?>();
 

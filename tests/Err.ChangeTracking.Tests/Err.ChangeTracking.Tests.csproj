@@ -19,7 +19,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\simples\Err.ChangeTracking.SampleDemo\Err.ChangeTracking.SampleDemo.csproj"/>
+        <ProjectReference Include="..\..\samples\Err.ChangeTracking.SampleDemo\Err.ChangeTracking.SampleDemo.csproj"/>
         <ProjectReference Include="..\..\src\Err.ChangeTracking\Err.ChangeTracking.csproj"/>
     </ItemGroup>
 

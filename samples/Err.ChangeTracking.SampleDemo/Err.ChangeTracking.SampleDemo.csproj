@@ -10,7 +10,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\src\Err.ChangeTracking\Err.ChangeTracking.csproj" />
+        <ProjectReference Include="..\..\src\Err.ChangeTracking\Err.ChangeTracking.csproj"/>
         <ProjectReference Include="..\..\src\Err.ChangeTracking.SourceGenerator\Err.ChangeTracking.SourceGenerator.csproj"
                           OutputItemType="Analyzer"
                           ReferenceOutputAssembly="false"/>

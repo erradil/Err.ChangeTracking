@@ -29,6 +29,13 @@ public class TrackableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, ITrac
         }
     }
 
+    public new bool TryGetValue(TKey key, out TValue value)
+    {
+        var result = base.TryGetValue(key, out value);
+        value.AsTrackable();
+        return result;
+    }
+
     public new void Add(TKey key, TValue value)
     {
         _hasStructuralChanges = true;

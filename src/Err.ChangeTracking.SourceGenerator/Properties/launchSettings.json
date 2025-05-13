@@ -3,7 +3,7 @@
   "profiles": {
     "DebugRoslynSourceGenerator": {
       "commandName": "DebugRoslynComponent",
-      "targetProject": "../../simples/Err.ChangeTracking.SampleDemo/Err.ChangeTracking.SampleDemo.csproj"
+      "targetProject": "../../samples/Err.ChangeTracking.SampleDemo/Err.ChangeTracking.SampleDemo.csproj"
     }
   }
 }
