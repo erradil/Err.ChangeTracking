@@ -43,4 +43,11 @@
         <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false"/>
     </ItemGroup>
 
+    <ItemGroup>
+        <!-- Link to an external Attributes.cs file -->
+        <Compile Include="../Err.ChangeTracking/Attributes.cs">
+            <Link>LinkedFiles\Attributes.cs</Link>
+        </Compile>
+    </ItemGroup>
+
 </Project>
