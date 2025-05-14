@@ -7,6 +7,7 @@ internal partial record Employee
     [TrackOnly] protected static partial int? Age { get; set; }
 
     [TrackCollection] public partial List<string>? Items { get; set; }
+    public partial List<string>? Managers { get; set; }
 
     [Trackable]
     public partial struct Address

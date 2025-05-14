@@ -6,7 +6,7 @@ namespace Err.ChangeTracking.SourceGenerator;
 /// <summary>
 /// Information about a containing/parent type
 /// </summary>
-internal sealed record ContainingTypeInfo
+internal record struct ContainingTypeInfo
 {
     public string Name { get; set; }
     public string Kind { get; set; }
@@ -25,7 +25,7 @@ internal sealed record ContainingTypeInfo
 /// <summary>
 ///     Represents metadata about a type needed for generation
 /// </summary>
-internal sealed record TypeInfo
+internal record struct TypeInfo
 {
     public string Name { get; set; }
     public string? Namespace { get; set; }
@@ -70,7 +70,7 @@ internal sealed record TypeInfo
 /// <summary>
 /// Represents all metadata needed to generate a property implementation
 /// </summary>
-internal sealed record PropertyInfo
+internal record struct PropertyInfo
 {
     public string Name { get; set; }
     public string TypeName { get; set; }
