@@ -1,221 +1,116 @@
 using System.Collections.Generic;
-using System.Text;
 using Microsoft.CodeAnalysis;
 
 namespace Err.ChangeTracking.SourceGenerator;
 
 /// <summary>
-///     Represents metadata about a type needed for generation
+/// Information about a containing/parent type
 /// </summary>
-internal class TypeInfo
+internal sealed record ContainingTypeInfo
 {
-    public string Name { get; }
-    public string? Namespace { get; }
-    public string Kind { get; } // class, struct, record, record struct
-    public Accessibility Accessibility { get; }
-    public List<string> Modifiers { get; } = [];
-    public List<ContainingTypeInfo> ContainingTypeInfos { get; } = [];
+    public string Name { get; set; }
+    public string Kind { get; set; }
+    public Accessibility Accessibility { get; set; }
+    public IReadOnlyList<string> Modifiers { get; set; }
 
-    public TypeInfo(INamedTypeSymbol typeSymbol)
-    {
-        Name = typeSymbol.Name;
-        Namespace = typeSymbol.ContainingNamespace.IsGlobalNamespace
-            ? null
-            : typeSymbol.ContainingNamespace.ToDisplayString();
-        Kind = DetermineTypeKind(typeSymbol);
-        Accessibility = typeSymbol.DeclaredAccessibility;
-
-        // Extract modifiers
-        if (typeSymbol.IsStatic) Modifiers.Add("static");
-        if (typeSymbol.IsAbstract && typeSymbol.TypeKind != TypeKind.Interface) Modifiers.Add("abstract");
-        if (typeSymbol.IsSealed && !typeSymbol.IsValueType && !typeSymbol.IsRecord) Modifiers.Add("sealed");
-
-        // Get containing types
-        var current = typeSymbol.ContainingType;
-        while (current != null)
-        {
-            var containingTypeInfo = new ContainingTypeInfo(
-                current.Name,
-                DetermineTypeKind(current),
-                current.DeclaredAccessibility,
-                current.IsStatic,
-                current is { IsAbstract: true, TypeKind: not TypeKind.Interface },
-                current is { IsSealed: true, IsValueType: false, IsRecord: false }
-            );
-
-            ContainingTypeInfos.Insert(0, containingTypeInfo);
-            current = current.ContainingType;
-        }
-    }
-
-    /// <summary>
-    ///     Determine the kind of a type (class, struct, record, record struct)
-    /// </summary>
-    private static string DetermineTypeKind(INamedTypeSymbol typeSymbol)
-    {
-        if (typeSymbol.IsValueType) return typeSymbol.IsRecord ? "record struct" : "struct";
-
-        return typeSymbol.IsRecord ? "record" : "class";
-    }
-
-    /// <summary>
-    ///     Returns the fully qualified name of the type including namespace and any containing types
-    /// </summary>
-    public string GetFullName()
-    {
-        var sb = new StringBuilder();
-
-        // Start with the namespace if not global
-        if (!string.IsNullOrEmpty(Namespace)) sb.Append(Namespace);
-
-        // Add all containing types in order
-        foreach (var containingTypeInfo in ContainingTypeInfos)
-        {
-            if (sb.Length > 0)
-                sb.Append('.');
-            sb.Append(containingTypeInfo.Name);
-        }
-
-        // Add the type name itself
-        if (sb.Length > 0)
-            sb.Append('.');
-        sb.Append(Name);
-
-        return sb.ToString();
-    }
-}
-
-/// <summary>
-///     Information about a containing/parent type
-/// </summary>
-internal class ContainingTypeInfo
-{
-    public string Name { get; }
-    public string Kind { get; }
-    public Accessibility Accessibility { get; }
-    public bool IsStatic { get; }
-    public bool IsAbstract { get; }
-    public bool IsSealed { get; }
-    public List<string> Modifiers { get; } = [];
-
-    public ContainingTypeInfo(string name, string kind, Accessibility accessibility, bool isStatic,
-        bool isAbstract, bool isSealed)
+    public ContainingTypeInfo(string name, string kind, Accessibility accessibility, IReadOnlyList<string> modifiers)
     {
         Name = name;
         Kind = kind;
         Accessibility = accessibility;
-        IsStatic = isStatic;
-        IsAbstract = isAbstract;
-        IsSealed = isSealed;
-
-        // Build modifiers list
-        if (isStatic) Modifiers.Add("static");
-        if (isAbstract) Modifiers.Add("abstract");
-        if (isSealed) Modifiers.Add("sealed");
+        Modifiers = modifiers;
     }
 }
 
 /// <summary>
-///     Represents all metadata needed to generate a property implementation
+///     Represents metadata about a type needed for generation
 /// </summary>
-internal class PropertyInfo
+internal sealed record TypeInfo
 {
-    public string Name { get; }
-    public string TypeName { get; }
-    public string BackingFieldName { get; }
-    public bool IsStatic { get; }
-    public bool IsVirtual { get; }
-    public bool IsOverride { get; }
-    public bool IsAbstract { get; }
-    public bool IsSealed { get; }
-    public Accessibility PropertyAccessibility { get; }
+    public string Name { get; set; }
+    public string? Namespace { get; set; }
+    public string Kind { get; set; }
+    public Accessibility Accessibility { get; set; }
+    public IReadOnlyList<string> Modifiers { get; set; }
+    public IReadOnlyList<ContainingTypeInfo> ContainingTypeInfos { get; set; }
 
-    // Accessor information
-    public bool HasGetter { get; }
-    public bool HasSetter { get; }
-    public bool IsSetterInitOnly { get; }
-    public Accessibility GetterAccessibility { get; }
-    public Accessibility SetterAccessibility { get; }
-
-    // Collection tracking information
-    public bool IsCollection { get; }
-    public string? TrackableCollectionType { get; }
-    public bool IsNullable { get; }
-
-    public PropertyInfo(IPropertySymbol propertySymbol)
+    public TypeInfo(string name, string? @namespace, string kind, Accessibility accessibility,
+        IReadOnlyList<string> modifiers, IReadOnlyList<ContainingTypeInfo> containingTypeInfos)
     {
-        Name = propertySymbol.Name;
-        TypeName = propertySymbol.Type.ToDisplayString();
-        BackingFieldName = $"_{char.ToLowerInvariant(Name[0])}{Name.Substring(1)}";
-
-        // Modifiers
-        IsStatic = propertySymbol.IsStatic;
-        IsVirtual = propertySymbol.IsVirtual;
-        IsOverride = propertySymbol.IsOverride;
-        IsAbstract = propertySymbol.IsAbstract;
-        IsSealed = propertySymbol.IsSealed;
-        PropertyAccessibility = propertySymbol.DeclaredAccessibility;
-
-        // Accessors
-        HasGetter = propertySymbol.GetMethod != null;
-        HasSetter = propertySymbol.SetMethod != null;
-        IsSetterInitOnly = HasSetter && propertySymbol.SetMethod!.IsInitOnly;
-        GetterAccessibility =
-            HasGetter ? propertySymbol.GetMethod!.DeclaredAccessibility : Accessibility.NotApplicable;
-        SetterAccessibility =
-            HasSetter ? propertySymbol.SetMethod!.DeclaredAccessibility : Accessibility.NotApplicable;
-        // Check if the type is nullable
-        IsNullable = propertySymbol.Type.NullableAnnotation == NullableAnnotation.Annotated;
-
-        // Check if this is a trackable collection
-        var collectionInfo = GetTrackableCollectionInfo(propertySymbol);
-        IsCollection = collectionInfo.IsCollection;
-        TrackableCollectionType = collectionInfo.TrackableType;
-    }
-
-
-    /// <summary>
-    ///     Check if a property has the [TrackCollection] attribute
-    /// </summary>
-    private static bool HasTrackCollectionAttribute(IPropertySymbol propertySymbol)
-    {
-        foreach (var attribute in propertySymbol.GetAttributes())
-            if (attribute.AttributeClass?.ToDisplayString() == Constants.TrackCollectionAttributeFullName)
-                return true;
-
-        return false;
+        Name = name;
+        Namespace = @namespace;
+        Kind = kind;
+        Accessibility = accessibility;
+        Modifiers = modifiers;
+        ContainingTypeInfos = containingTypeInfos;
     }
 
     /// <summary>
-    ///     Check if a property type is a collection that should be converted to a trackable version
+    /// Returns the fully qualified name of the type including namespace and any containing types
     /// </summary>
-    private static (bool IsCollection, string TrackableType) GetTrackableCollectionInfo(
-        IPropertySymbol property)
+    public string GetFullName()
     {
-        if (!HasTrackCollectionAttribute(property))
-            return (false, string.Empty);
+        var parts = new List<string>();
 
-        var propertyType = property.Type;
+        // Add namespace if not global
+        if (!string.IsNullOrEmpty(Namespace))
+            parts.Add(Namespace);
 
+        // Add containing types
+        foreach (var containingType in ContainingTypeInfos)
+            parts.Add(containingType.Name);
 
-        // Check for List<T>
-        if (propertyType is INamedTypeSymbol listType &&
-            listType.OriginalDefinition.ToDisplayString() == "System.Collections.Generic.List<T>")
-        {
-            var elementType = listType.TypeArguments[0].ToDisplayString();
-            return (true, $"{Constants.TrackableListFullName}<{elementType}>");
-        }
+        // Add the type name
+        parts.Add(Name);
 
-        // Check for Dictionary<K,V>
-        if (propertyType is INamedTypeSymbol dictType &&
-            dictType.OriginalDefinition.ToDisplayString() ==
-            "System.Collections.Generic.Dictionary<TKey, TValue>")
-        {
-            var keyType = dictType.TypeArguments[0].ToDisplayString();
-            var valueType = dictType.TypeArguments[1].ToDisplayString();
-            return (true, $"{Constants.TrackableDictionaryFullName}<{keyType}, {valueType}>");
-        }
+        return string.Join(".", parts);
+    }
+}
 
-        return (false, string.Empty);
+/// <summary>
+/// Represents all metadata needed to generate a property implementation
+/// </summary>
+internal sealed record PropertyInfo
+{
+    public string Name { get; set; }
+    public string TypeName { get; set; }
+    public string BackingFieldName { get; set; }
+    public bool IsStatic { get; set; }
+    public bool IsVirtual { get; set; }
+    public bool IsOverride { get; set; }
+    public bool IsAbstract { get; set; }
+    public bool IsSealed { get; set; }
+    public Accessibility PropertyAccessibility { get; set; }
+    public bool HasGetter { get; set; }
+    public bool HasSetter { get; set; }
+    public bool IsSetterInitOnly { get; set; }
+    public Accessibility GetterAccessibility { get; set; }
+    public Accessibility SetterAccessibility { get; set; }
+    public bool IsCollection { get; set; }
+    public string? TrackableCollectionType { get; set; }
+    public bool IsNullable { get; set; }
+
+    public PropertyInfo(string name, string typeName, string backingFieldName, bool isStatic, bool isVirtual,
+        bool isOverride, bool isAbstract, bool isSealed, Accessibility propertyAccessibility, bool hasGetter,
+        bool hasSetter, bool isSetterInitOnly, Accessibility getterAccessibility,
+        Accessibility setterAccessibility, bool isCollection, string? trackableCollectionType, bool isNullable)
+    {
+        Name = name;
+        TypeName = typeName;
+        BackingFieldName = backingFieldName;
+        IsStatic = isStatic;
+        IsVirtual = isVirtual;
+        IsOverride = isOverride;
+        IsAbstract = isAbstract;
+        IsSealed = isSealed;
+        PropertyAccessibility = propertyAccessibility;
+        HasGetter = hasGetter;
+        HasSetter = hasSetter;
+        IsSetterInitOnly = isSetterInitOnly;
+        GetterAccessibility = getterAccessibility;
+        SetterAccessibility = setterAccessibility;
+        IsCollection = isCollection;
+        TrackableCollectionType = trackableCollectionType;
+        IsNullable = isNullable;
     }
 }

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+/*using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
@@ -9,7 +9,7 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace Err.ChangeTracking.SourceGenerator;
 
-[Generator]
+//[Generator]
 public class PartialPropertyGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -566,4 +566,5 @@ public class PartialPropertyGenerator : IIncrementalGenerator
     }
 
     #endregion
-}
+}*/
+
