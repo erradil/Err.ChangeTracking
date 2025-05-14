@@ -149,4 +149,16 @@ internal static class SymbolHelper
             _ => string.Empty // Default or NotApplicable
         };
     }
+
+
+    public static bool IsTypeOf(this IPropertySymbol propertySymbol, string typeFullName)
+    {
+        var propertyType = propertySymbol.Type;
+
+        if (propertyType is not INamedTypeSymbol namedType)
+            return false;
+
+        var originalDef = namedType.OriginalDefinition.ToDisplayString();
+        return originalDef == typeFullName;
+    }
 }

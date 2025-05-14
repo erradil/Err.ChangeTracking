@@ -32,13 +32,13 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
                 .Where(static t => t.TypeSymbol is not null);
 
         // Transform the type declaration and symbol into our strongly-typed metadata
-        IncrementalValuesProvider<(TypeInfo TypeInfo, ImmutableArray<PropertyInfo> Properties, bool
-                AlreadyImplementsTrackable)>
-            typeMetadata = trackableTypes.Select(static (typeData, _) => ExtractMetadata(typeData.TypeSymbol));
+        var typeMetadata =
+            trackableTypes
+                .Select(static (typeData, _) => ExtractMetadata(typeData.TypeSymbol));
 
         // Register the source output
         context.RegisterSourceOutput(typeMetadata,
-            static (ctx, data) => GenerateSource(ctx, data.TypeInfo, data.Properties, data.AlreadyImplementsTrackable));
+            static (ctx, data) => GenerateSource(ctx, data.TypeInfo, data.Properties));
     }
 
     /// <summary>
@@ -67,47 +67,40 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
     /// <summary>
     /// Extract all the metadata needed for code generation in a single pass
     /// </summary>
-    private static (TypeInfo TypeInfo, ImmutableArray<PropertyInfo> Properties, bool AlreadyImplementsTrackable)
+    private static (TypeInfo TypeInfo, ImmutableArray<PropertyInfo> Properties)
         ExtractMetadata(
             INamedTypeSymbol typeSymbol)
     {
-        // Create TypeInfo
-        var typeInfo = CreateTypeInfo(typeSymbol);
+        // Extract properties that should be tracked
+        var properties = GetTrackableProperties(typeSymbol);
 
-        // Check if type already implements the ITrackable interface
-        var alreadyImplementsTrackable = SymbolHelper.ImplementsTrackableInterface(typeSymbol);
+        // Create TypeInfo
+        var typeInfo = new TypeInfo
+        {
+            Name = typeSymbol.Name,
+            Namespace = typeSymbol.ContainingNamespace.IsGlobalNamespace
+                ? null
+                : typeSymbol.ContainingNamespace.ToDisplayString(),
+            Kind = SymbolHelper.DetermineTypeKind(typeSymbol),
+            Accessibility = typeSymbol.DeclaredAccessibility,
+            Modifiers = SymbolHelper.GetTypeModifiers(typeSymbol),
+            ContainingTypeInfos = SymbolHelper.ExtractContainingTypeInfos(typeSymbol),
+            AlreadyImplementsTrackable = SymbolHelper.ImplementsTrackableInterface(typeSymbol),
+            Properties = properties
+        };
+
+        return (typeInfo, properties);
+    }
+
+    /// <summary>
+    /// Get all properties that should be tracked based on attributes and tracking mode
+    /// </summary>
+    private static ImmutableArray<PropertyInfo> GetTrackableProperties(INamedTypeSymbol typeSymbol)
+    {
+        var properties = ImmutableArray.CreateBuilder<PropertyInfo>();
 
         // Get tracking mode from type
         var trackingMode = SymbolHelper.GetTrackingMode(typeSymbol);
-
-        // Extract properties that should be tracked
-        var properties = GetTrackableProperties(typeSymbol, trackingMode);
-
-        return (typeInfo, properties, alreadyImplementsTrackable);
-    }
-
-    /// <summary>
-    ///     Create type information from a type symbol
-    /// </summary>
-    private static TypeInfo CreateTypeInfo(INamedTypeSymbol typeSymbol)
-    {
-        return new TypeInfo(
-            typeSymbol.Name,
-            typeSymbol.ContainingNamespace.IsGlobalNamespace ? null : typeSymbol.ContainingNamespace.ToDisplayString(),
-            SymbolHelper.DetermineTypeKind(typeSymbol),
-            typeSymbol.DeclaredAccessibility,
-            SymbolHelper.GetTypeModifiers(typeSymbol),
-            SymbolHelper.ExtractContainingTypeInfos(typeSymbol)
-        );
-    }
-
-    /// <summary>
-    ///     Get all properties that should be tracked based on attributes and tracking mode
-    /// </summary>
-    private static ImmutableArray<PropertyInfo> GetTrackableProperties(INamedTypeSymbol typeSymbol,
-        TrackingMode trackingMode)
-    {
-        var properties = ImmutableArray.CreateBuilder<PropertyInfo>();
 
         foreach (var member in typeSymbol.GetMembers().OfType<IPropertySymbol>())
         {
@@ -115,80 +108,73 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
             if (!member.IsPartial())
                 continue;
 
-            // Check tracking attributes
+            // Check property attributes
             var isTrackOnly = SymbolHelper.HasAttribute(member, Constants.TrackOnlyAttributeFullName);
             var isNotTracked = SymbolHelper.HasAttribute(member, Constants.NotTrackedAttributeFullName);
-            var isTrackableCollection = SymbolHelper.IsTrackableCollection(member);
 
-            // Determine if this property should be tracked - fixed logic
-            var shouldBeTracked = !isNotTracked && (
-                isTrackableCollection ||
-                trackingMode != TrackingMode.OnlyMarked ||
-                isTrackOnly
-            );
-
-            // Skip if not trackable
-            if (!shouldBeTracked)
+            // If explicitly marked not to track, then don't track
+            if (isNotTracked)
                 continue;
 
-            properties.Add(ExtractPropertyInfo(member));
+            // If mode is OnlyMarked, then only properties with [TrackOnly] are tracked
+            if (trackingMode == TrackingMode.OnlyMarked && !isTrackOnly)
+                continue;
+
+            // If the type is already TrackableList or TrackableDictionary, not need to track
+            if (member.IsTypeOf(Constants.TrackableDictionaryFullName) ||
+                member.IsTypeOf(Constants.TrackableListFullName))
+                continue;
+
+            // We've determined this property should be tracked, now check if it's a collection
+            var (isCollection, trackableCollectionType) = GetCollectionTypeInfo(member);
+
+            var trackableProperty = new PropertyInfo
+            {
+                Name = member.Name,
+                TypeName = member.Type.ToDisplayString(),
+                BackingFieldName = $"_{char.ToLowerInvariant(member.Name[0])}{member.Name.Substring(1)}",
+                IsStatic = member.IsStatic,
+                IsVirtual = member.IsVirtual,
+                IsOverride = member.IsOverride,
+                IsAbstract = member.IsAbstract,
+                IsSealed = member.IsSealed,
+                PropertyAccessibility = member.DeclaredAccessibility,
+                HasGetter = member.GetMethod != null,
+                HasSetter = member.SetMethod != null,
+                IsSetterInitOnly = member.SetMethod?.IsInitOnly ?? false,
+                GetterAccessibility = member.GetMethod?.DeclaredAccessibility ?? Accessibility.NotApplicable,
+                SetterAccessibility = member.SetMethod?.DeclaredAccessibility ?? Accessibility.NotApplicable,
+                IsCollection = isCollection,
+                TrackableCollectionType = trackableCollectionType,
+                IsNullable = member.Type.NullableAnnotation == NullableAnnotation.Annotated
+            };
+
+            properties.Add(trackableProperty);
         }
 
         return properties.ToImmutable();
     }
 
     /// <summary>
-    /// Extract property information from a property symbol
-    /// </summary>
-    private static PropertyInfo ExtractPropertyInfo(IPropertySymbol propertySymbol)
-    {
-        // Check if this is a trackable collection and get its type
-        var (isCollection, trackableCollectionType) = GetCollectionTypeInfo(propertySymbol);
-
-        return new PropertyInfo(
-            propertySymbol.Name,
-            propertySymbol.Type.ToDisplayString(),
-            $"_{char.ToLowerInvariant(propertySymbol.Name[0])}{propertySymbol.Name.Substring(1)}",
-            propertySymbol.IsStatic,
-            propertySymbol.IsVirtual,
-            propertySymbol.IsOverride,
-            propertySymbol.IsAbstract,
-            propertySymbol.IsSealed,
-            propertySymbol.DeclaredAccessibility,
-            propertySymbol.GetMethod != null,
-            propertySymbol.SetMethod != null,
-            propertySymbol.SetMethod?.IsInitOnly ?? false,
-            propertySymbol.GetMethod?.DeclaredAccessibility ?? Accessibility.NotApplicable,
-            propertySymbol.SetMethod?.DeclaredAccessibility ?? Accessibility.NotApplicable,
-            isCollection,
-            trackableCollectionType,
-            propertySymbol.Type.NullableAnnotation == NullableAnnotation.Annotated
-        );
-    }
-
-    /// <summary>
-    ///     Determines if a property is a trackable collection and gets the appropriate wrapper type
+    /// Determines if a property is a trackable collection and gets the appropriate wrapper type
     /// </summary>
     private static (bool isCollection, string trackableCollectionType) GetCollectionTypeInfo(
         IPropertySymbol propertySymbol)
     {
+        // Only check for TrackCollection attribute - this is the ONLY condition for replacing with trackable collections
         if (!SymbolHelper.HasAttribute(propertySymbol, Constants.TrackCollectionAttributeFullName))
             return (false, null);
 
-        var propertyType = propertySymbol.Type;
-
-        if (propertyType is not INamedTypeSymbol namedType)
+        if (propertySymbol.Type is not INamedTypeSymbol namedType)
             return (false, null);
 
-        var originalDef = namedType.OriginalDefinition.ToDisplayString();
-
-        if (originalDef == "System.Collections.Generic.List<T>")
+        if (propertySymbol.IsTypeOf("System.Collections.Generic.List<T>"))
         {
-            var elementType = namedType.TypeArguments[0].ToDisplayString();
-            return (true, $"{Constants.TrackableListFullName}<{elementType}>");
+            var argType = namedType.TypeArguments[0].ToDisplayString();
+            return (true, $"{Constants.TrackableListFullName}<{argType}>");
         }
 
-        if (originalDef == "System.Collections.Generic.Dictionary<TKey, TValue>")
+        if (propertySymbol.IsTypeOf("System.Collections.Generic.Dictionary<TKey, TValue>"))
         {
             var keyType = namedType.TypeArguments[0].ToDisplayString();
             var valueType = namedType.TypeArguments[1].ToDisplayString();
@@ -201,11 +187,13 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
     /// <summary>
     /// Generate source code for a type
     /// </summary>
+    /// <summary>
+    /// Generate source code for a type
+    /// </summary>
     private static void GenerateSource(
         SourceProductionContext context,
         TypeInfo typeInfo,
-        ImmutableArray<PropertyInfo> properties,
-        bool alreadyImplementsTrackable)
+        ImmutableArray<PropertyInfo> properties)
     {
         if (properties.IsEmpty)
             return;
@@ -221,14 +209,77 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
             sourceBuilder.AppendLine();
         }
 
-        // Generate the type based on whether it's nested or not
-        if (typeInfo.ContainingTypeInfos.Count > 0)
-            GenerateNestedType(sourceBuilder, typeInfo, properties, alreadyImplementsTrackable);
-        else
-            GenerateStandardType(sourceBuilder, typeInfo, properties, alreadyImplementsTrackable);
+        // Generate the type (handles both nested and non-nested cases)
+        GenerateType(sourceBuilder, typeInfo, properties);
 
         var fileName = $"{typeInfo.GetFullName()}.g.cs";
         context.AddSource(fileName, SourceText.From(sourceBuilder.ToString(), Encoding.UTF8));
+    }
+
+    /// <summary>
+    ///     Generate a type with its properties, handling both nested and non-nested types
+    /// </summary>
+    private static void GenerateType(
+        StringBuilder sourceBuilder,
+        TypeInfo typeInfo,
+        ImmutableArray<PropertyInfo> properties)
+    {
+        // Get the fully qualified type name for interface implementation
+        var fullTypeName = typeInfo.GetFullName();
+        var typeName = typeInfo.ContainingTypeInfos.Count > 0
+            ? fullTypeName
+            : typeInfo.Name;
+
+        // Indent management
+        var indent = 0;
+
+        // For nested types, generate the containing type hierarchy first
+        if (typeInfo.ContainingTypeInfos.Count > 0)
+            // For each containing type, open a partial type declaration
+            foreach (var containingType in typeInfo.ContainingTypeInfos)
+            {
+                var indentStr = new string(' ', indent * 4);
+
+                var containingTypeDeclaration = BuildTypeDeclaration(
+                    new TypeInfo
+                    {
+                        Name = containingType.Name,
+                        Namespace = null,
+                        Kind = containingType.Kind,
+                        Accessibility = containingType.Accessibility,
+                        Modifiers = containingType.Modifiers,
+                        ContainingTypeInfos = new List<ContainingTypeInfo>(),
+                        AlreadyImplementsTrackable = null
+                    },
+                    containingType.Name
+                );
+
+                sourceBuilder.AppendLine(
+                    $"{indentStr}{containingTypeDeclaration.Replace($" : {Constants.ITrackableFullName}<{containingType.Name}>", "")}");
+                sourceBuilder.AppendLine($"{indentStr}{{");
+
+                indent++;
+            }
+
+        // Now generate the actual type
+        var typeIndent = new string(' ', indent * 4);
+
+        // Build type declaration with all modifiers
+        var typeDeclaration = BuildTypeDeclaration(typeInfo, typeName);
+        sourceBuilder.AppendLine($"{typeIndent}{typeDeclaration}");
+        sourceBuilder.AppendLine($"{typeIndent}{{");
+        indent++;
+
+        // If we're adding the interface implementation, generate the required members
+        if (typeInfo.AlreadyImplementsTrackable is false)
+            GenerateTrackingImplementation(sourceBuilder, typeName, new string(' ', indent * 4));
+
+        // Generate each property
+        foreach (var property in properties)
+            GenerateProperty(sourceBuilder, property, new string(' ', indent * 4));
+
+        // Close all type declarations (the current type + any containing types)
+        for (var i = indent; i > 0; i--) sourceBuilder.AppendLine(new string(' ', (i - 1) * 4) + "}");
     }
 
     /// <summary>
@@ -247,33 +298,6 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// Generate a standard (non-nested) type
-    /// </summary>
-    private static void GenerateStandardType(
-        StringBuilder sourceBuilder,
-        TypeInfo typeInfo,
-        ImmutableArray<PropertyInfo> properties,
-        bool alreadyImplementsTrackable)
-    {
-        // Build type declaration with all modifiers
-        var typeDeclaration = BuildTypeDeclaration(typeInfo, alreadyImplementsTrackable, typeInfo.Name);
-        sourceBuilder.AppendLine(typeDeclaration);
-        sourceBuilder.AppendLine("{");
-
-        // If we're adding the interface implementation, generate the required members
-        if (!alreadyImplementsTrackable)
-        {
-            GenerateTrackingImplementation(sourceBuilder, typeInfo.Name, "    ");
-        }
-
-        // Generate each property
-        foreach (var property in properties)
-            GenerateProperty(sourceBuilder, property, "    ");
-
-        sourceBuilder.AppendLine("}");
-    }
-
-    /// <summary>
     ///     Generate tracking implementation for a type
     /// </summary>
     private static void GenerateTrackingImplementation(StringBuilder sourceBuilder, string typeName, string indent)
@@ -287,82 +311,19 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
     /// <summary>
     ///     Build the type declaration with appropriate modifiers and interface implementation
     /// </summary>
-    private static string BuildTypeDeclaration(TypeInfo typeInfo, bool alreadyImplementsTrackable, string typeName)
+    private static string BuildTypeDeclaration(TypeInfo typeInfo, string typeName)
     {
         var accessibility = SymbolHelper.GetAccessibilityAsString(typeInfo.Accessibility);
         var modifiers = string.Join(" ", typeInfo.Modifiers);
         var modifiersWithSpace = !string.IsNullOrEmpty(modifiers) ? $"{modifiers} " : "";
 
         // Add the ITrackable<T> interface if not already implemented
-        var interfaceImplementation = !alreadyImplementsTrackable
+        var interfaceImplementation = typeInfo.AlreadyImplementsTrackable is false
             ? $" : {Constants.ITrackableFullName}<{typeName}>"
             : "";
 
         return
             $"{accessibility} {modifiersWithSpace}{PartialKeyword} {typeInfo.Kind} {typeInfo.Name}{interfaceImplementation}";
-    }
-
-    /// <summary>
-    /// Generate nested type hierarchy for embedded types
-    /// </summary>
-    private static void GenerateNestedType(
-        StringBuilder sourceBuilder,
-        TypeInfo typeInfo,
-        ImmutableArray<PropertyInfo> properties,
-        bool alreadyImplementsTrackable)
-    {
-        // Get fully qualified type name for interface implementation
-        var fullTypeName = typeInfo.GetFullName();
-
-        // Indent management
-        var indent = 0;
-
-        // For each containing type, open a partial type declaration
-        foreach (var containingType in typeInfo.ContainingTypeInfos)
-        {
-            var indentStr = new string(' ', indent * 4);
-
-            var containingTypeDeclaration = BuildTypeDeclaration(
-                new TypeInfo(
-                    containingType.Name,
-                    null,
-                    containingType.Kind,
-                    containingType.Accessibility,
-                    containingType.Modifiers,
-                    new List<ContainingTypeInfo>()
-                ),
-                false,
-                containingType.Name
-            );
-
-            sourceBuilder.AppendLine(
-                $"{indentStr}{containingTypeDeclaration.Replace($" : {Constants.ITrackableFullName}<{containingType.Name}>", "")}");
-            sourceBuilder.AppendLine($"{indentStr}{{");
-
-            indent++;
-        }
-
-        // Now generate the actual type we're tracking
-        var typeIndent = new string(' ', indent * 4);
-
-        // Build type declaration with all modifiers
-        var typeDeclaration = BuildTypeDeclaration(typeInfo, alreadyImplementsTrackable, fullTypeName);
-        sourceBuilder.AppendLine($"{typeIndent}{typeDeclaration}");
-        sourceBuilder.AppendLine($"{typeIndent}{{");
-        indent++;
-
-        // Add trackable implementation
-        if (!alreadyImplementsTrackable)
-        {
-            GenerateTrackingImplementation(sourceBuilder, fullTypeName, new string(' ', indent * 4));
-        }
-
-        // Generate each property
-        foreach (var property in properties)
-            GenerateProperty(sourceBuilder, property, new string(' ', indent * 4));
-
-        // Close all type declarations
-        for (var i = indent; i > 0; i--) sourceBuilder.AppendLine(new string(' ', (i - 1) * 4) + "}");
     }
 
     /// <summary>
