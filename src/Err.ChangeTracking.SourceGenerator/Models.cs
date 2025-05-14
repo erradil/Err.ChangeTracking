@@ -88,7 +88,7 @@ internal record struct TypeInfo
 }
 
 /// <summary>
-/// Represents all metadata needed to generate a property implementation
+/// Extension to PropertyInfo to include tracking-related attributes
 /// </summary>
 internal record struct PropertyInfo
 {
@@ -109,4 +109,8 @@ internal record struct PropertyInfo
     public bool IsCollection { get; init; }
     public string? TrackableCollectionType { get; init; }
     public bool IsNullable { get; init; }
+
+    // Tracking-specific attributes
+    public bool IsTrackOnly { get; init; }
+    public bool HasTrackCollection { get; init; }
 }

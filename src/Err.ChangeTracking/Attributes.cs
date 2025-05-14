@@ -2,10 +2,21 @@
 
 namespace Err.ChangeTracking;
 
+/// <summary>
+///     Tracking mode that indicates whether all properties should be tracked or only those
+///     explicitly marked with the [TrackOnly] attribute
+/// </summary>
 public enum TrackingMode
 {
-    All,
-    OnlyMarked
+    /// <summary>
+    ///     Track all eligible properties
+    /// </summary>
+    All = 0,
+
+    /// <summary>
+    ///     Only track properties marked with [TrackOnly] attribute
+    /// </summary>
+    OnlyMarked = 1
 }
 
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]

@@ -1,4 +1,4 @@
-namespace Err.ChangeTracking.SampleDemo;
+namespace Err.ChangeTracking.SampleDemo.Models;
 
 [Trackable(Mode = TrackingMode.OnlyMarked)]
 internal partial record Employee
@@ -7,7 +7,8 @@ internal partial record Employee
     [TrackOnly] protected static partial int? Age { get; set; }
 
     [TrackCollection] [TrackOnly] public partial List<string>? Items { get; set; }
-    //public partial System.Collections.Generic.List<string> Managers { get; set; }
+
+    [TrackOnly] public partial List<string> Managers { get; set; }
 
     [Trackable]
     public partial struct Address
@@ -20,6 +21,6 @@ internal partial record Employee
 [Trackable(Mode = TrackingMode.OnlyMarked)]
 public partial record Order
 {
-    [TrackOnly] public partial List<string>? numbers { get; set; }
-    [TrackCollection] public partial List<string>? Prices { get; set; }
+    [TrackOnly] public List<string>? Numbers { get; set; }
+    [TrackOnly] public partial string Title { get; set; }
 }
