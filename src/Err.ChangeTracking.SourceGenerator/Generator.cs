@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Text;
-using Err.ChangeTracking.SourceGenerator.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;

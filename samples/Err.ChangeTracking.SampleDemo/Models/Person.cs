@@ -4,7 +4,7 @@ namespace Err.ChangeTracking.SampleDemo.Models;
 internal partial record Employee
 {
     [TrackOnly] public partial string Name { get; set; }
-    [TrackOnly] protected static partial int? Age { get; set; }
+    [TrackOnly] protected partial int? Age { get; set; }
 
     [TrackCollection] [TrackOnly] public partial List<string>? Items { get; set; }
 
@@ -21,6 +21,6 @@ internal partial record Employee
 [Trackable(Mode = TrackingMode.OnlyMarked)]
 public partial record Order
 {
-    [TrackOnly] public List<string>? Numbers { get; set; }
+    public List<string>? Numbers { get; set; }
     [TrackOnly] public partial string Title { get; set; }
 }

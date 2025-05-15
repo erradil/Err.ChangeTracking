@@ -5,7 +5,7 @@ public partial class Model
 {
     public partial string Name { get; set; }
 
-    [TrackCollection] public partial List<string>? Items { get; set; }
+    public partial List<string>? Items { get; set; }
 }
 
 public partial class Model : ITrackable<Model>
