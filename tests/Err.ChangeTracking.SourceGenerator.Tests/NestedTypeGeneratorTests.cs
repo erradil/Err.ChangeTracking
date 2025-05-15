@@ -111,7 +111,7 @@ public class NestedTypeGeneratorTests
     public void GenerateEmployeeRecord()
     {
         // Create an instance of the source generator
-        var generator = new PartialPropertyGenerator();
+        var generator = new ChangeTrackingGenerator();
 
         // Use GeneratorDriver for testing
         var driver = CSharpGeneratorDriver.Create(generator);

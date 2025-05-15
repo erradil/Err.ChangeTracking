@@ -106,11 +106,9 @@ internal record struct PropertyInfo
     public bool IsSetterInitOnly { get; init; }
     public Accessibility GetterAccessibility { get; init; }
     public Accessibility SetterAccessibility { get; init; }
-    public bool IsCollection { get; init; }
-    public string? TrackableCollectionType { get; init; }
+    public bool IsTrackCollection { get; init; }
+    public string? CollectionWrapperType { get; init; }
     public bool IsNullable { get; init; }
-
-    // Tracking-specific attributes
     public bool IsTrackOnly { get; init; }
     public bool HasTrackCollection { get; init; }
 }

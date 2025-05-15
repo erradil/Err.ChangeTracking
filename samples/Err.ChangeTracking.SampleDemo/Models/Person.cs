@@ -8,7 +8,7 @@ internal partial record Employee
 
     [TrackCollection] [TrackOnly] public partial List<string>? Items { get; set; }
 
-    [TrackOnly] public partial List<string> Managers { get; set; }
+    [TrackOnly] public partial List<string> Managers { get; init; }
 
     [Trackable]
     public partial struct Address

@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Text;
 using Err.ChangeTracking.SourceGenerator.Extensions;
 using Microsoft.CodeAnalysis;
@@ -14,55 +13,24 @@ namespace Err.ChangeTracking.SourceGenerator;
 ///     Source generator that implements partial properties with change tracking
 /// </summary>
 [Generator]
-public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
+public class ChangeTrackingGenerator : IIncrementalGenerator
 {
-    #region Constants
-
-    private const string PartialKeyword = "partial";
-    private const string StaticKeyword = "static";
-    private const string GetAccessor = "get";
-    private const string SetAccessor = "set";
-    private const string InitAccessor = "init";
-
-    #endregion
-
-    #region Diagnostics
-
-    private static readonly DiagnosticDescriptor PartialPropertyMissingTrackOnly = new(
-        "ECT001",
-        "Partial property missing TrackOnly attribute",
-        "Partial property '{0}' in type '{1}' with TrackingMode.OnlyMarked will not be implemented without [TrackOnly] attribute",
-        "Err.ChangeTracking",
-        DiagnosticSeverity.Warning,
-        true);
-
-    private static readonly DiagnosticDescriptor UnsupportedCollectionType = new(
-        "ECT002",
-        "Unsupported collection type",
-        "Property '{0}' has [TrackCollection] but its type '{1}' is not supported. Only List<T> and Dictionary<K,V> are supported.",
-        "Err.ChangeTracking",
-        DiagnosticSeverity.Warning,
-        true);
-
-    #endregion
-
     #region Initialization
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         // Set up the pipeline for the Trackable attribute
-        IncrementalValuesProvider<(TypeDeclarationSyntax TypeDeclaration, INamedTypeSymbol TypeSymbol)> trackableTypes =
+        var trackableTypes =
             context.SyntaxProvider
                 .ForAttributeWithMetadataName(
-                    Constants.TrackableAttributeFullName,
+                    Constants.Types.TrackableAttributeFullName,
                     static (node, _) =>
                         node is TypeDeclarationSyntax typeDecl && HasPartialModifier(typeDecl),
                     static (ctx, _) => GetTypeInfo(ctx))
-                .Where(static t => t.TypeSymbol is not null);
+                .Where(static t => t is not null);
 
         // Register the source output
-        context.RegisterSourceOutput(trackableTypes,
-            static (ctx, data) => GenerateForType(ctx, data.TypeSymbol));
+        context.RegisterSourceOutput(trackableTypes, static (ctx, typeInfo) => GenerateSource(ctx, typeInfo!.Value));
     }
 
     /// <summary>
@@ -76,35 +44,18 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
     /// <summary>
     /// Transform the GeneratorAttributeSyntaxContext to get the type declaration and symbol
     /// </summary>
-    private static (TypeDeclarationSyntax TypeDeclaration, INamedTypeSymbol TypeSymbol) GetTypeInfo(
-        GeneratorAttributeSyntaxContext ctx)
+    private static TypeInfo? GetTypeInfo(GeneratorAttributeSyntaxContext ctx)
     {
-        if (ctx.TargetNode is TypeDeclarationSyntax typeDecl &&
-            ctx.TargetSymbol is INamedTypeSymbol typeSymbol)
+        if (ctx is not { TargetNode: TypeDeclarationSyntax typeDecl, TargetSymbol: INamedTypeSymbol typeSymbol })
         {
-            return (typeDecl, typeSymbol);
+            return null;
         }
 
-        return (null, null);
-    }
-
-    #endregion
-
-    #region Main Generation
-
-    /// <summary>
-    /// Generate code for a single type
-    /// </summary>
-    private static void GenerateForType(SourceProductionContext context, INamedTypeSymbol typeSymbol)
-    {
-        if (typeSymbol == null)
-            return;
-
         // Extract properties that should be tracked
-        var properties = GetTrackableProperties(typeSymbol, context);
+        var properties = GetTrackableProperties(typeSymbol);
 
         if (properties.IsEmpty)
-            return;
+            return null;
 
         // Create TypeInfo
         var typeInfo = new TypeInfo
@@ -121,15 +72,18 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
             Properties = properties
         };
 
-        // Generate source code for the type
-        GenerateSource(context, typeInfo, properties);
+        return typeInfo;
     }
+
+    #endregion
+
+    #region Main Generation
 
     /// <summary>
     /// Get all properties that should be tracked based on attributes and tracking mode
     /// </summary>
     private static ImmutableArray<PropertyInfo> GetTrackableProperties(
-        INamedTypeSymbol typeSymbol, SourceProductionContext context)
+        INamedTypeSymbol typeSymbol)
     {
         var properties = ImmutableArray.CreateBuilder<PropertyInfo>();
 
@@ -143,9 +97,10 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
                 continue;
 
             // Check property attributes
-            var isTrackOnly = SymbolHelper.HasAttribute(member, Constants.TrackOnlyAttributeFullName);
-            var isNotTracked = SymbolHelper.HasAttribute(member, Constants.NotTrackedAttributeFullName);
-            var hasTrackCollection = SymbolHelper.HasAttribute(member, Constants.TrackCollectionAttributeFullName);
+            var isTrackOnly = SymbolHelper.HasAttribute(member, Constants.Types.TrackOnlyAttributeFullName);
+            var isNotTracked = SymbolHelper.HasAttribute(member, Constants.Types.NotTrackedAttributeFullName);
+            var hasTrackCollection =
+                SymbolHelper.HasAttribute(member, Constants.Types.TrackCollectionAttributeFullName);
 
             // If explicitly marked not to track, then don't track
             if (isNotTracked)
@@ -153,24 +108,15 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
 
             // If mode is OnlyMarked, then only properties with [TrackOnly] are tracked
             if (trackingMode == TrackingMode.OnlyMarked && !isTrackOnly)
-            {
-                // Report diagnostic for partial properties that won't be implemented
-                context.ReportDiagnostic(Diagnostic.Create(
-                    PartialPropertyMissingTrackOnly,
-                    member.Locations.FirstOrDefault(),
-                    member.Name,
-                    typeSymbol.Name));
-
                 continue;
-            }
 
             // If the type is already TrackableList or TrackableDictionary, not need to track
-            if (member.IsTypeOf(Constants.TrackableDictionaryFullName) ||
-                member.IsTypeOf(Constants.TrackableListFullName))
+            if (member.IsTypeOf(Constants.Types.TrackableDictionaryFullName) ||
+                member.IsTypeOf(Constants.Types.TrackableListFullName))
                 continue;
 
             // We've determined this property should be tracked, now check if it's a collection
-            var (isCollection, trackableCollectionType) = GetCollectionTypeInfo(member, context);
+            var (isTrackCollection, collectionWrapperType) = SymbolHelper.IsTrackableCollection(member);
 
             var trackableProperty = new PropertyInfo
             {
@@ -188,8 +134,8 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
                 IsSetterInitOnly = member.SetMethod?.IsInitOnly ?? false,
                 GetterAccessibility = member.GetMethod?.DeclaredAccessibility ?? Accessibility.NotApplicable,
                 SetterAccessibility = member.SetMethod?.DeclaredAccessibility ?? Accessibility.NotApplicable,
-                IsCollection = isCollection,
-                TrackableCollectionType = trackableCollectionType,
+                IsTrackCollection = isTrackCollection,
+                CollectionWrapperType = collectionWrapperType,
                 IsNullable = member.Type.NullableAnnotation == NullableAnnotation.Annotated,
                 IsTrackOnly = isTrackOnly,
                 HasTrackCollection = hasTrackCollection
@@ -202,55 +148,10 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// Determines if a property is a trackable collection and gets the appropriate wrapper type
-    /// </summary>
-    private static (bool isCollection, string trackableCollectionType) GetCollectionTypeInfo(
-        IPropertySymbol propertySymbol, SourceProductionContext context)
-    {
-        if (propertySymbol == null)
-            return (false, null);
-
-        // Only check for TrackCollection attribute - this is the ONLY condition for replacing with trackable collections
-        if (!SymbolHelper.HasAttribute(propertySymbol, Constants.TrackCollectionAttributeFullName))
-            return (false, null);
-
-        if (propertySymbol.Type is not INamedTypeSymbol namedType)
-            return (false, null);
-
-        if (propertySymbol.IsTypeOf("System.Collections.Generic.List<T>"))
-        {
-            var argType = namedType.TypeArguments[0].ToDisplayString();
-            return (true, $"{Constants.TrackableListFullName}<{argType}>");
-        }
-
-        if (propertySymbol.IsTypeOf("System.Collections.Generic.Dictionary<TKey, TValue>"))
-        {
-            var keyType = namedType.TypeArguments[0].ToDisplayString();
-            var valueType = namedType.TypeArguments[1].ToDisplayString();
-            return (true, $"{Constants.TrackableDictionaryFullName}<{keyType}, {valueType}>");
-        }
-
-        // Report diagnostic for unsupported collection types
-        context.ReportDiagnostic(Diagnostic.Create(
-            UnsupportedCollectionType,
-            propertySymbol.Locations.FirstOrDefault(),
-            propertySymbol.Name,
-            propertySymbol.Type.ToDisplayString()));
-
-        return (false, null);
-    }
-
-    /// <summary>
     /// Generate source code for a type
     /// </summary>
-    private static void GenerateSource(
-        SourceProductionContext context,
-        TypeInfo typeInfo,
-        ImmutableArray<PropertyInfo> properties)
+    private static void GenerateSource(SourceProductionContext context, TypeInfo typeInfo)
     {
-        if (properties.IsEmpty)
-            return;
-
         var sourceBuilder = new StringBuilder(2048); // Pre-allocate a reasonable buffer size
 
         GenerateFileHeader(sourceBuilder);
@@ -263,7 +164,7 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
         }
 
         // Generate the type (handles both nested and non-nested cases)
-        GenerateType(sourceBuilder, typeInfo, properties);
+        GenerateType(sourceBuilder, typeInfo);
 
         var fileName = $"{typeInfo.GetFullName()}.g.cs";
         context.AddSource(fileName, SourceText.From(sourceBuilder.ToString(), Encoding.UTF8));
@@ -278,17 +179,16 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
     /// </summary>
     private static void GenerateType(
         StringBuilder sourceBuilder,
-        TypeInfo typeInfo,
-        ImmutableArray<PropertyInfo> properties)
+        TypeInfo typeInfo)
     {
+        // Indent management
+        var indent = 0;
+
         // Get the fully qualified type name for interface implementation
         var fullTypeName = typeInfo.GetFullName();
         var typeName = typeInfo.ContainingTypeInfos.Count > 0
             ? fullTypeName
             : typeInfo.Name;
-
-        // Indent management
-        var indent = 0;
 
         // For nested types, generate the containing type hierarchy first
         if (typeInfo.ContainingTypeInfos.Count > 0)
@@ -313,7 +213,7 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
                 );
 
                 sourceBuilder.AppendLine(
-                        $"{indentStr}{containingTypeDeclaration.Replace($" : {Constants.ITrackableFullName}<{containingType.Name}>", "")}")
+                        $"{indentStr}{containingTypeDeclaration.Replace($" : {Constants.Types.ITrackableFullName}<{containingType.Name}>", "")}")
                     .AppendLine($"{indentStr}{{");
 
                 indent++;
@@ -337,7 +237,7 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
         }
 
         // Generate each property
-        foreach (var property in properties)
+        foreach (var property in typeInfo.Properties)
         {
             GenerateProperty(sourceBuilder, property, GetIndentation(indent));
         }
@@ -375,9 +275,9 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
     private static void GenerateTrackingImplementation(StringBuilder sourceBuilder, string typeName, string indent)
     {
         sourceBuilder.AppendLine($"{indent}// ITrackable interface implementation")
-            .AppendLine($"{indent}private {Constants.IChangeTrackingFullName}<{typeName}>? _changeTracker;")
+            .AppendLine($"{indent}private {Constants.Types.IChangeTrackingFullName}<{typeName}>? _changeTracker;")
             .AppendLine(
-                $"{indent}public {Constants.IChangeTrackingFullName}<{typeName}> GetChangeTracker() => _changeTracker ??= new {Constants.ChangeTrackingFullName}<{typeName}>(this);")
+                $"{indent}public {Constants.Types.IChangeTrackingFullName}<{typeName}> GetChangeTracker() => _changeTracker ??= new {Constants.Types.ChangeTrackingFullName}<{typeName}>(this);")
             .AppendLine();
     }
 
@@ -392,11 +292,11 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
 
         // Add the ITrackable<T> interface if not already implemented
         var interfaceImplementation = typeInfo.AlreadyImplementsTrackable is false
-            ? $" : {Constants.ITrackableFullName}<{typeName}>"
+            ? $" : {Constants.Types.ITrackableFullName}<{typeName}>"
             : "";
 
         return
-            $"{accessibility} {modifiersWithSpace}{PartialKeyword} {typeInfo.Kind} {typeInfo.Name}{interfaceImplementation}";
+            $"{accessibility} {modifiersWithSpace}{Constants.Keywords.PartialKeyword} {typeInfo.Kind} {typeInfo.Name}{interfaceImplementation}";
     }
 
     #endregion
@@ -412,7 +312,7 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
         if (property.IsTrackOnly)
             sourceBuilder.AppendLine($"{indent}// This property is tracked because it has the [TrackOnly] attribute");
         else
-            sourceBuilder.AppendLine($"{indent}// This property is tracked by default based on TrackingMode");
+            sourceBuilder.AppendLine($"{indent}// This property is tracked by default based on TrackingMode.All");
 
         if (property.HasTrackCollection)
             sourceBuilder.AppendLine(
@@ -432,9 +332,9 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
     private static void GenerateBackingField(StringBuilder sourceBuilder, PropertyInfo property, string indent)
     {
         var nullableAnnotation = property.IsNullable ? "?" : "";
-        var staticModifier = property.IsStatic ? $"{StaticKeyword} " : "";
-        var fieldType = property.IsCollection
-            ? $"{property.TrackableCollectionType}{nullableAnnotation}"
+        var staticModifier = property.IsStatic ? $"{Constants.Keywords.StaticKeyword} " : "";
+        var fieldType = property.CollectionWrapperType is not null
+            ? $"{property.CollectionWrapperType}{nullableAnnotation}"
             : property.TypeName;
 
         sourceBuilder.AppendLine($"{indent}private {staticModifier}{fieldType} {property.BackingFieldName};");
@@ -463,12 +363,12 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
             SymbolHelper.GetAccessibilityAsString(property.PropertyAccessibility)
         };
 
-        if (property.IsStatic) modifiers.Add(StaticKeyword);
+        if (property.IsStatic) modifiers.Add(Constants.Keywords.StaticKeyword);
         if (property.IsVirtual) modifiers.Add("virtual");
         if (property.IsOverride) modifiers.Add("override");
         if (property.IsSealed) modifiers.Add("sealed");
         if (property.IsAbstract) modifiers.Add("abstract");
-        modifiers.Add(PartialKeyword);
+        modifiers.Add(Constants.Keywords.PartialKeyword);
 
         return modifiers;
     }
@@ -500,11 +400,12 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
 
         if (!property.IsAbstract)
         {
-            sourceBuilder.AppendLine($"{indent}{getterAccessibility}{GetAccessor} => {property.BackingFieldName};");
+            sourceBuilder.AppendLine(
+                $"{indent}{getterAccessibility}{Constants.Keywords.GetAccessor} => {property.BackingFieldName};");
         }
         else
         {
-            sourceBuilder.AppendLine($"{indent}{getterAccessibility}{GetAccessor};");
+            sourceBuilder.AppendLine($"{indent}{getterAccessibility}{Constants.Keywords.GetAccessor};");
         }
     }
 
@@ -515,7 +416,8 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
     {
         var setterAccessibility =
             GetAccessorAccessibility(property.SetterAccessibility, property.PropertyAccessibility);
-        var accessorKeyword = property.IsSetterInitOnly ? InitAccessor : SetAccessor;
+        var accessorKeyword =
+            property.IsSetterInitOnly ? Constants.Keywords.InitAccessor : Constants.Keywords.SetAccessor;
 
         if (!property.IsAbstract)
         {
@@ -564,10 +466,10 @@ public class OptimizedChangeTrackingGenerator : IIncrementalGenerator
     /// </summary>
     private static string GeneratePropertyAssignment(PropertyInfo property)
     {
-        if (property.IsCollection)
+        if (property.CollectionWrapperType is not null)
         {
             return
-                $"{property.BackingFieldName} = value != null ? new {property.TrackableCollectionType}(value) : null;";
+                $"{property.BackingFieldName} = value != null ? new {property.CollectionWrapperType}(value) : null;";
         }
         else
         {

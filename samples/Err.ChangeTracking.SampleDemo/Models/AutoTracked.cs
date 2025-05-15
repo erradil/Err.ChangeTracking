@@ -1,4 +1,4 @@
-/*namespace Err.ChangeTracking.SampleDemo.Models;
+namespace Err.ChangeTracking.SampleDemo.Models;
 
 // Test models
 [Trackable]
@@ -69,5 +69,4 @@ public partial class ComplexModel
 public partial class NestedItem
 {
     public partial string Name { get; set; }
-}*/
-
+}

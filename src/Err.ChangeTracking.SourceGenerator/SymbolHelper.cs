@@ -21,32 +21,40 @@ internal static class SymbolHelper
     /// <summary>
     /// Check if a type is already a trackable collection
     /// </summary>
-    public static bool IsTrackableCollection(IPropertySymbol propertySymbol)
+    public static (bool isTrackCollection, string? collectionWrapperType ) IsTrackableCollection(
+        IPropertySymbol? propertySymbol)
     {
-        var typeName = propertySymbol.Type.ToDisplayString();
+        if (propertySymbol?.Type is not INamedTypeSymbol namedType)
+            return (false, null);
+
+        var typeName = propertySymbol.Type.OriginalDefinition.ToDisplayString();
 
         // No need to track if already a trackable type
-        if (typeName.StartsWith(Constants.TrackableListFullName) ||
-            typeName.StartsWith(Constants.TrackableDictionaryFullName))
-            return false;
+        if (typeName.StartsWith(Constants.Types.TrackableListFullName) ||
+            typeName.StartsWith(Constants.Types.TrackableDictionaryFullName))
+            return (false, null);
 
-        // Check if the property has TrackCollectionAttribute
-        var isTrackCollection = HasAttribute(propertySymbol, Constants.TrackCollectionAttributeFullName);
+        var (isCollection, collectionWrapperType) = typeName switch
+        {
+            "System.Collections.Generic.List<T>" =>
+                (isCollection: true, collectionWrapperType: Constants.Types.TrackableListFullName),
+            "System.Collections.Generic.Dictionary<TKey, TValue>" =>
+                (isCollection: true, collectionWrapperType: Constants.Types.TrackableDictionaryFullName),
+            _ => (isCollection: false, collectionWrapperType: null)
+        };
 
-        return isTrackCollection && IsCollectionType(propertySymbol.Type);
-    }
+        // Check if the property is a Collection, now only List<> and Dictionary<> are supported
+        if (!isCollection)
+            return (false, null);
 
-    /// <summary>
-    ///     Check if a type is a supported collection type
-    /// </summary>
-    private static bool IsCollectionType(ITypeSymbol type)
-    {
-        if (type is not INamedTypeSymbol namedType)
-            return false;
+        // Check if the property has a TrackCollectionAttribute
+        var isTrackCollection = HasAttribute(propertySymbol, Constants.Types.TrackCollectionAttributeFullName);
+        if (!isTrackCollection)
+            return (false, null);
 
-        var originalType = namedType.OriginalDefinition.ToDisplayString();
-        return originalType == "System.Collections.Generic.List<T>" ||
-               originalType == "System.Collections.Generic.Dictionary<TKey, TValue>";
+        var genericArgs = string.Join(", ",
+            namedType.TypeArguments.Select(t => t.OriginalDefinition.ToDisplayString()).ToList());
+        return (isTrackCollection, $"{collectionWrapperType}<{genericArgs}>");
     }
 
     /// <summary>
@@ -55,7 +63,7 @@ internal static class SymbolHelper
     public static bool ImplementsTrackableInterface(INamedTypeSymbol typeSymbol)
     {
         foreach (var interfaceSymbol in typeSymbol.AllInterfaces)
-            if (interfaceSymbol.OriginalDefinition.ToDisplayString().StartsWith(Constants.ITrackableFullName))
+            if (interfaceSymbol.OriginalDefinition.ToDisplayString().StartsWith(Constants.Types.ITrackableFullName))
                 return true;
 
         return false;
@@ -120,10 +128,11 @@ internal static class SymbolHelper
     public static TrackingMode GetTrackingMode(INamedTypeSymbol typeSymbol)
     {
         foreach (var attribute in typeSymbol.GetAttributes())
-            if (attribute.AttributeClass?.ToDisplayString() == Constants.TrackableAttributeFullName)
+            if (attribute.AttributeClass?.ToDisplayString() == Constants.Types.TrackableAttributeFullName)
             {
                 // Check if attribute has constructor arguments for tracking mode
-                if (attribute.NamedArguments.FirstOrDefault(kvp => kvp.Key == "Mode").Value.Value is int
+                if (attribute.NamedArguments.FirstOrDefault(kvp => kvp.Key == nameof(TrackableAttribute.Mode)).Value
+                        .Value is int
                     trackingModeValue)
                     return (TrackingMode)trackingModeValue;
 
