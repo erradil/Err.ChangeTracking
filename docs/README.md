@@ -169,6 +169,23 @@ Assert.False(invoice.GetChangeTracker().HasChanged(x => x.Comment));
 
 ---
 
+# 📦 Requirements
+
+**IMPORTANT:** This package uses C# 13 feature _**Patrial properties**_ and requires either:
+
+- .NET 9.0 or higher, OR
+- .NET 8.0 with LangVersion set to "preview" in your project file
+
+If you're using .NET 8.0, add the following to your project file:
+
+``` xml
+<PropertyGroup>
+    <LangVersion>preview</LangVersion>
+</PropertyGroup>
+```
+
+! Without this configuration, the source generator will not work correctly.
+
 # 📦 Installation
 
 ```bash

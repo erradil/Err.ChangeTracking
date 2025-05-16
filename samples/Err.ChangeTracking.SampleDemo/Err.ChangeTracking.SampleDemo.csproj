@@ -7,13 +7,24 @@
         <Nullable>enable</Nullable>
 
         <IsPackable>false</IsPackable>
+        <ChangeTrackerVersion>0.4.0</ChangeTrackerVersion>
+        <UseProjectReference>true</UseProjectReference>
     </PropertyGroup>
 
-    <ItemGroup>
+    <ItemGroup Condition="'$(UseProjectReference)' == 'true'">
         <ProjectReference Include="..\..\src\Err.ChangeTracking\Err.ChangeTracking.csproj"/>
         <ProjectReference Include="..\..\src\Err.ChangeTracking.SourceGenerator\Err.ChangeTracking.SourceGenerator.csproj"
                           OutputItemType="Analyzer"
                           ReferenceOutputAssembly="false"/>
-
     </ItemGroup>
+
+    <ItemGroup Condition="'$(UseProjectReference)' == 'false'">
+        <PackageReference Include="Err.ChangeTracking" Version="$(ChangeTrackerVersion)"/>
+        <PackageReference Include="Err.ChangeTracking.SourceGenerator" Version="$(ChangeTrackerVersion)">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
+
 </Project>
