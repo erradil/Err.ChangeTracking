@@ -1,9 +1,9 @@
 name: CD
 
 on:
-  push:
-    tags:
-      - 'v*'
+#  push:
+#    tags:
+#      - 'v*'
   workflow_dispatch:
     inputs:
       public-release:
@@ -39,7 +39,7 @@ jobs:
 
       # Step 2: Then pack
       - name: Pack projects
-        run: dotnet pack --configuration Release --no-build --include-symbols -p:SymbolPackageFormat=snupkg -p:PublicRelease=${{ github.event.inputs.public-release}}
+        run: dotnet pack --configuration Release  -p:PublicRelease=${{ github.event.inputs.public-release}}
 
       # Push packages
       - name: Push NuGet packages

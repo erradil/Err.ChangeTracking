@@ -2,353 +2,292 @@
 
 namespace Err.ChangeTracking.Tests;
 
-public class CollectionTrackingTests
+public class OrderTrackingTests
 {
     [Fact]
-    public void TrackableList_DetectsStructuralChanges()
+    public void Order_SimplePropertyTracking()
     {
         // Arrange
-        var model = new ModelWithList
+        var order = new Order
         {
-            Items = []
+            Id = "ORD-001"
         }.AsTrackable();
 
-        // Act - Add an item to the list using AsTrackable() to access the overridden methods
-        model.Items?.AsTrackable().Add("New Item");
-
-        // Assert - Only check the collection's dirty state, not the model
-        Assert.True(model.Items?.AsTrackable().IsDirty);
-        // Model doesn't get notified of collection changes directly
-        Assert.False(model.GetChangeTracker().IsDirty);
-    }
-
-    [Fact]
-    public void TrackableList_DetectsChangesAfterInitialization()
-    {
-        // Arrange
-        var model = new ModelWithList
-        {
-            Items = ["Item 1", "Item 2"]
-        }.AsTrackable();
-
-        // Act - Use AsTrackable() to access the overridden methods
-        model.Items?.AsTrackable().Add("Item 3");
-
-        // Assert - Only check the collection's dirty state
-        Assert.True(model.Items?.AsTrackable().IsDirty);
-    }
-
-    [Fact]
-    public void TrackableList_RemovingItemDetected()
-    {
-        // Arrange
-        var model = new ModelWithList
-        {
-            Items = ["Item 1", "Item 2"]
-        }.AsTrackable();
-
-        // Act - Use AsTrackable() to access the overridden methods
-        model.Items?.AsTrackable().Remove("Item 1");
-
-        // Assert - Only check the collection's dirty state
-        Assert.True(model.Items?.AsTrackable().IsDirty);
-    }
-
-    [Fact]
-    public void TrackableList_ClearingItemsDetected()
-    {
-        // Arrange
-        var model = new ModelWithList
-        {
-            Items = ["Item 1", "Item 2"]
-        }.AsTrackable();
-
-        // Act - Use AsTrackable() to access the overridden methods
-        model.Items?.AsTrackable().Clear();
-
-        // Assert - Only check the collection's dirty state
-        Assert.True(model.Items?.AsTrackable().IsDirty);
-    }
-
-    [Fact]
-    public void TrackableList_AddRangeDetected()
-    {
-        // Arrange
-        var model = new ModelWithList { Items = [] }.AsTrackable();
-
-        // Act - Use AsTrackable() to access the overridden methods
-        model.Items?.AsTrackable().AddRange(["Item 1", "Item 2"]);
-
-        // Assert - Only check the collection's dirty state
-        Assert.True(model.Items?.AsTrackable().IsDirty);
-        Assert.Equal(2, model.Items?.Count);
-    }
-
-    [Fact]
-    public void TrackableList_NestedTrackableObjectsDetected()
-    {
-        // Arrange
-        var model = new ModelWithNestedList
-        {
-            NestedItems = new List<NestedItem>
-            {
-                new() { Name = "Item 1" },
-                new() { Name = "Item 2" }
-            }
-        }.AsTrackable();
-
-        // Act - Modify a property of a nested object
-        // No need for AsTrackable on individual items as they aren't collections
-        model.NestedItems.AsTrackable()[0].Name = "Modified Item";
-
-        // Assert - The change should be detected in the collection
-        Assert.True(model.NestedItems?.AsTrackable().IsDirty);
-        Assert.True(model.NestedItems![0].GetChangeTracker().IsDirty);
-    }
-
-    [Fact]
-    public void TrackableDictionary_DetectsStructuralChanges()
-    {
-        // Arrange
-        var model = new ModelWithDictionary { Properties = [] }.AsTrackable();
-
-        // Act - Add an item to the dictionary using AsTrackable
-        model.Properties?.AsTrackable().Add("Key1", "Value1");
-
-        // Assert - Only check the collection's dirty state
-        Assert.True(model.Properties?.AsTrackable().IsDirty);
-    }
-
-    [Fact]
-    public void TrackableDictionary_DetectsChangesAfterInitialization()
-    {
-        // Arrange
-        var model = new ModelWithDictionary
-        {
-            Properties = new Dictionary<string, string>
-            {
-                { "Key1", "Value1" },
-                { "Key2", "Value2" }
-            }
-        }.AsTrackable();
-
-        // Act - Use AsTrackable to access the overridden methods
-        model.Properties?.AsTrackable().Add("Key3", "Value3");
-
-        // Assert - Only check the collection's dirty state
-        Assert.True(model.Properties?.AsTrackable().IsDirty);
-    }
-
-    [Fact]
-    public void TrackableDictionary_UpdatingExistingValueDetected()
-    {
-        // Arrange
-        var model = new ModelWithDictionary
-        {
-            Properties = new Dictionary<string, string>
-            {
-                { "Key1", "Value1" },
-                { "Key2", "Value2" }
-            }
-        }.AsTrackable();
-
-        // Act - Use indexer with AsTrackable
-        model.Properties.AsTrackable()["Key1"] = "Updated Value";
-
-        // Assert - Only check the collection's dirty state
-        Assert.True(model.Properties?.AsTrackable().IsDirty);
-    }
-
-    [Fact]
-    public void TrackableDictionary_RemovingItemDetected()
-    {
-        // Arrange
-        var model = new ModelWithDictionary
-        {
-            Properties = new Dictionary<string, string>
-            {
-                { "Key1", "Value1" },
-                { "Key2", "Value2" }
-            }
-        }.AsTrackable();
-
-        // Act - Use AsTrackable to access the overridden methods
-        model.Properties?.AsTrackable().Remove("Key1");
-
-        // Assert - Only check the collection's dirty state
-        Assert.True(model.Properties?.AsTrackable().IsDirty);
-    }
-
-    [Fact]
-    public void TrackableDictionary_ClearingItemsDetected()
-    {
-        // Arrange
-        var model = new ModelWithDictionary
-        {
-            Properties = new Dictionary<string, string>
-            {
-                { "Key1", "Value1" },
-                { "Key2", "Value2" }
-            }
-        }.AsTrackable();
-
-        // Act - Use AsTrackable to access the overridden methods
-        model.Properties?.AsTrackable().Clear();
-
-        // Assert - Only check the collection's dirty state
-        Assert.True(model.Properties?.AsTrackable().IsDirty);
-    }
-
-    [Fact]
-    public void TrackableDictionary_NestedTrackableObjectsDetected()
-    {
-        // Arrange
-        var model = new ModelWithNestedDictionary
-        {
-            ConfigItems = new Dictionary<string, NestedItem>
-            {
-                { "Item1", new NestedItem { Name = "Config 1" } },
-                { "Item2", new NestedItem { Name = "Config 2" } }
-            }
-        }.AsTrackable();
-
-        // Act - Modify a property of a nested object
-        // No need for AsTrackable on individual items as they aren't collections
-        model.ConfigItems["Item1"].Name = "Modified Config";
-
-        // Assert - The change should be detected in the collection
-        Assert.True(model.ConfigItems?.AsTrackable().IsDirty);
-    }
-
-    [Fact]
-    public void Model_DetectsChangesWhenCollectionsAreReplaced()
-    {
-        // Arrange
-        var model = new ComplexModel
-        {
-            Name = "Test Model",
-            Items = new List<string> { "Item 1" }
-        }.AsTrackable();
-
-        // Act - Replace the entire collection (this should be tracked by the model)
-        model.Items = new List<string> { "New Item 1", "New Item 2" };
-
-        // Assert - The model should detect the replacement of the collection
-        Assert.True(model.GetChangeTracker().IsDirty);
-    }
-
-    [Fact]
-    public void NullableTrackableList_HandlesNullCorrectly()
-    {
-        // Arrange
-        var model = new ModelWithNullableList().AsTrackable();
-
-        // Act & Assert - Initially null
-        Assert.Null(model.OptionalItems);
-
-        // Set to non-null and modify with AsTrackable
-        model.OptionalItems = new List<string>();
-        // Setting OptionalItems should make the model dirty
-        Assert.True(model.GetChangeTracker().IsDirty);
-
-        model.OptionalItems?.AsTrackable().Add("Item1");
-
-        // Assert - Collection should be dirty now
-        Assert.NotNull(model.OptionalItems);
-        Assert.True(model.OptionalItems?.AsTrackable().IsDirty);
-
-        // Set back to null - should make model dirty again if it was accepted
-        model.GetChangeTracker().AcceptChanges();
-        Assert.False(model.GetChangeTracker().IsDirty);
-
-        model.OptionalItems = null;
-
-        // Assert - Model should detect the change to null
-        Assert.Null(model.OptionalItems);
-        Assert.True(model.GetChangeTracker().IsDirty);
-    }
-
-    [Fact]
-    public void NullableTrackableDictionary_HandlesNullCorrectly()
-    {
-        // Arrange
-        var model = new ModelWithNullableDictionary().AsTrackable();
-
-        // Act & Assert - Initially null
-        Assert.Null(model.OptionalProperties);
-
-        // Set to non-null - should make model dirty
-        model.OptionalProperties = new Dictionary<string, string>();
-        Assert.True(model.GetChangeTracker().IsDirty);
-
-        model.OptionalProperties?.AsTrackable().Add("Key1", "Value1");
+        // Act - Modify a simple tracked property
+        order.Id = "ORD-002";
 
         // Assert
-        Assert.NotNull(model.OptionalProperties);
-        Assert.True(model.OptionalProperties?.AsTrackable().IsDirty);
-
-        // Set back to null - should make model dirty again if it was accepted
-        model.GetChangeTracker().AcceptChanges();
-        Assert.False(model.GetChangeTracker().IsDirty);
-
-        model.OptionalProperties = null;
-
-        // Assert - Model should detect the change to null
-        Assert.Null(model.OptionalProperties);
-        Assert.True(model.GetChangeTracker().IsDirty);
+        var tracker = order.GetChangeTracker();
+        Assert.True(tracker.IsDirty);
+        Assert.True(tracker.HasChanged(nameof(Order.Id)));
+        Assert.Equal("ORD-001", tracker.GetOriginalValues()[nameof(Order.Id)]);
+        Assert.Equal("ORD-002", order.Id);
     }
 
     [Fact]
-    public void ModelRollback_RestoresCollections()
+    public void Order_NotTrackedPropertyIgnored()
     {
         // Arrange
-        var model = new ComplexModel
+        var originalDate = DateTime.Today;
+        var order = new Order
         {
-            Name = "Test Model",
-            Items = new List<string> { "Item 1", "Item 2" },
-            Properties = new Dictionary<string, string>
+            Id = "ORD-001",
+            CreatedDate = originalDate
+        }.AsTrackable();
+
+        // Act - Modify a property marked with NotTracked
+        var newDate = DateTime.Today.AddDays(1);
+        order.CreatedDate = newDate;
+
+        // Assert - Should not be tracked
+        var tracker = order.GetChangeTracker();
+        Assert.False(tracker.IsDirty);
+        Assert.False(tracker.HasChanged(nameof(Order.CreatedDate)));
+        // NotTracked properties won't be in the original values dictionary
+        Assert.False(tracker.GetOriginalValues().ContainsKey(nameof(Order.CreatedDate)));
+        Assert.Equal(newDate, order.CreatedDate);
+    }
+
+    [Fact]
+    public void Order_NonPartialPropertyIgnored()
+    {
+        // Arrange
+        var order = new Order
+        {
+            Id = "ORD-001",
+            Notes = "Initial notes"
+        }.AsTrackable();
+
+        // Act - Modify a non-partial property
+        order.Notes = "Modified notes";
+
+        // Assert - Should not be tracked
+        var tracker = order.GetChangeTracker();
+        Assert.False(tracker.IsDirty);
+        // Non-partial properties won't be in the original values dictionary
+        Assert.False(tracker.GetOriginalValues().ContainsKey(nameof(Order.Notes)));
+        Assert.Equal("Modified notes", order.Notes);
+    }
+
+    [Fact]
+    public void Order_TagsCollectionTracking()
+    {
+        // Arrange
+        var initialTags = new List<string> { "Important", "Priority" };
+        var order = new Order
+        {
+            Id = "ORD-001",
+            Tags = new List<string>(initialTags)
+        }.AsTrackable();
+
+        // Act - Modify tags collection
+        order.Tags.AsTrackable().Add("Urgent");
+
+        // Assert - Collection should be dirty
+        Assert.True(order.Tags.AsTrackable().IsDirty);
+        Assert.False(order.GetChangeTracker().IsDirty); // Model doesn't track collection changes directly
+        Assert.Equal(3, order.Tags.Count);
+        Assert.Contains("Urgent", order.Tags);
+    }
+
+    [Fact]
+    public void Order_ReplacingTagsCollectionTracked()
+    {
+        // Arrange
+        var initialTags = new List<string> { "Important" };
+        var order = new Order
+        {
+            Id = "ORD-001",
+            Tags = new List<string>(initialTags)
+        }.AsTrackable();
+
+        // Act - Replace entire collection
+        var newTags = new List<string> { "New", "Tags" };
+        order.Tags = newTags;
+
+        // Assert - Model should detect collection replacement
+        var tracker = order.GetChangeTracker();
+        Assert.True(tracker.IsDirty);
+        Assert.True(tracker.HasChanged(nameof(Order.Tags)));
+        var originalTags = tracker.GetOriginalValues()[nameof(Order.Tags)] as List<string>;
+        Assert.NotNull(originalTags);
+        Assert.Single(originalTags);
+        Assert.Equal("Important", originalTags[0]);
+    }
+
+    [Fact]
+    public void Order_ItemsCollectionTracking()
+    {
+        // Arrange
+        var order = new Order
+        {
+            Id = "ORD-001",
+            Items = new List<OrderItem>
             {
-                { "Prop1", "Value 1" },
-                { "Prop2", "Value 2" }
+                new() { Quantity = 1, UnitPrice = 10.5m }
             }
         }.AsTrackable();
 
-        // Act - Replace collections entirely (model should track this)
-        model.Name = "Modified Name";
-        model.Items = new List<string> { "New Item" };
-        model.Properties = new Dictionary<string, string> { { "NewKey", "NewValue" } };
-
-        // Rollback all changes
-        model.GetChangeTracker().Rollback();
+        // Act - Add item to collection
+        order.Items.AsTrackable().Add(new OrderItem { Quantity = 2, UnitPrice = 20m });
 
         // Assert
-        Assert.Equal("Test Model", model.Name);
-        Assert.Equal(2, model.Items?.Count);
-        Assert.Equal(2, model.Properties?.Count);
-        Assert.Contains("Item 1", model.Items!);
-        Assert.Contains("Item 2", model.Items!);
-        Assert.True(model.Properties!.ContainsKey("Prop1"));
-        Assert.False(model.GetChangeTracker().IsDirty);
+        Assert.True(order.Items.AsTrackable().IsDirty);
+        Assert.Equal(2, order.Items.Count);
     }
 
     [Fact]
-    public void NullableCollection_Rollback_RestoresToNull()
+    public void Order_ModifyingNestedOrderItemTracked()
     {
         // Arrange
-        var model = new ModelWithNullableCollections().AsTrackable();
-        Assert.Null(model.OptionalItems);
-        Assert.Null(model.OptionalProperties);
+        var initialQuantity = 1;
+        var order = new Order
+        {
+            Id = "ORD-001",
+            Items = new List<OrderItem>
+            {
+                new() { Quantity = initialQuantity, UnitPrice = 10.5m }
+            }
+        }.AsTrackable();
 
-        // Act - Set collections (model tracks these assignments)
-        model.OptionalItems = new List<string>();
-        model.OptionalProperties = new Dictionary<string, string>();
+        // Act - Modify property of nested item
+        order.Items[0].Quantity = 5;
 
-        // Rollback
-        model.GetChangeTracker().Rollback();
+        // Assert
+        var itemTracker = order.Items[0].GetChangeTracker();
+        Assert.True(itemTracker.IsDirty);
+        Assert.True(itemTracker.HasChanged(nameof(OrderItem.Quantity)));
+        Assert.Equal(initialQuantity, itemTracker.GetOriginalValues()[nameof(OrderItem.Quantity)]);
+        Assert.Equal(5, order.Items[0].Quantity);
+    }
 
-        // Assert - Both collections should be back to null
-        Assert.Null(model.OptionalItems);
-        Assert.Null(model.OptionalProperties);
-        Assert.False(model.GetChangeTracker().IsDirty);
+    [Fact]
+    public void Product_OnlyMarkedPropertiesTracked()
+    {
+        // Arrange - Product uses TrackingMode.OnlyMarked
+        var initialDescription = "Original Description";
+        var product = new Product
+        {
+            Description = initialDescription // This has TrackOnly attribute
+        }.AsTrackable();
+
+        // Act - Modify tracked property
+        product.Description = "Updated Description";
+
+        // Assert
+        var tracker = product.GetChangeTracker();
+        Assert.True(tracker.IsDirty);
+        Assert.True(tracker.HasChanged(nameof(Product.Description)));
+        Assert.Equal(initialDescription, tracker.GetOriginalValues()[nameof(Product.Description)]);
+        Assert.Equal("Updated Description", product.Description);
+    }
+
+    [Fact]
+    public void OrderItem_NestedProductTrackingWorks()
+    {
+        // Arrange
+        var initialDescription = "Original";
+        var orderItem = new OrderItem
+        {
+            Quantity = 1,
+            UnitPrice = 10.5m,
+            Product = new Product { Description = initialDescription }.AsTrackable()
+        }.AsTrackable();
+
+        // Act - Modify nested product
+        orderItem.Product.Description = "Modified";
+
+        // Assert
+        var productTracker = orderItem.Product.GetChangeTracker();
+        Assert.True(productTracker.IsDirty);
+        Assert.True(productTracker.HasChanged(nameof(Product.Description)));
+        Assert.Equal(initialDescription, productTracker.GetOriginalValues()[nameof(Product.Description)]);
+        Assert.Equal("Modified", orderItem.Product.Description);
+    }
+
+    [Fact]
+    public void Product_CategoriesCollection_WithTrackOnly()
+    {
+        // Arrange
+        var product = new Product
+        {
+            Description = "Test Product",
+            Categories = new List<string> { "Category1" }
+        }.AsTrackable();
+
+        // Act - Modify tracked collection
+        product.Categories.AsTrackable().Add("Category2");
+
+        // Assert
+        Assert.True(product.Categories.AsTrackable().IsDirty);
+        Assert.Equal(2, product.Categories.Count);
+        Assert.Contains("Category2", product.Categories);
+    }
+
+    [Fact]
+    public void Order_Rollback_RestoresSimpleProperties()
+    {
+        // Arrange
+        var initialId = "ORD-001";
+        var order = new Order
+        {
+            Id = initialId
+        }.AsTrackable();
+
+        // Act - Modify a simple property
+        order.Id = "ORD-002";
+
+        // Verify the property was changed
+        var tracker = order.GetChangeTracker();
+        Assert.True(tracker.IsDirty);
+        Assert.True(tracker.HasChanged(nameof(Order.Id)));
+        Assert.Equal(initialId, tracker.GetOriginalValues()[nameof(Order.Id)]);
+
+        // Rollback the change
+        order.GetChangeTracker().Rollback();
+
+        // Assert - Property should be restored to its original value
+        Assert.Equal(initialId, order.Id);
+        Assert.False(tracker.IsDirty);
+        Assert.False(tracker.HasChanged(nameof(Order.Id)));
+    }
+
+
+    [Fact]
+    public void Order_AcceptChanges_ClearsDirtyFlags()
+    {
+        // Arrange
+        var initialId = "ORD-001";
+        var order = new Order
+        {
+            Id = initialId
+        }.AsTrackable();
+
+        // Act - Modify a simple property
+        const string newId = "ORD-002";
+        order.Id = newId;
+
+        // Verify the property was changed
+        var tracker = order.GetChangeTracker();
+        Assert.True(tracker.IsDirty);
+        Assert.True(tracker.HasChanged(nameof(Order.Id)));
+        Assert.Equal(initialId, tracker.GetOriginalValues()[nameof(Order.Id)]);
+
+        // Accept the change
+        order.GetChangeTracker().AcceptChanges();
+
+        // Assert - Dirty flags should be cleared while values remain changed
+        Assert.Equal(newId, order.Id);
+        Assert.False(tracker.IsDirty);
+        Assert.False(tracker.HasChanged(nameof(Order.Id)));
+
+        // Make another change to verify the original value was updated
+        var newerId = "ORD-003";
+        order.Id = newerId;
+
+        // After accepting changes, the original value should be the accepted value
+        Assert.True(tracker.IsDirty);
+        Assert.True(tracker.HasChanged(nameof(Order.Id)));
+        Assert.Equal(newId, tracker.GetOriginalValues()[nameof(Order.Id)]);
     }
 }
