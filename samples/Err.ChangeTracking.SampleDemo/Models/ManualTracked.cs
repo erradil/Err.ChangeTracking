@@ -14,7 +14,7 @@ public partial class Model : ITrackable<Model>
 
     public IChangeTracking<Model> GetChangeTracker()
     {
-        return _changeTracker ??= new ChangeTracking<Model>(this);
+        return _changeTracker ??= ChangeTracking.Create(this);
     }
 
     private string _name;

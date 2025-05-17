@@ -1,45 +1,94 @@
-﻿# Err.ChangeTracking Solution (Full Documentation)
+﻿# Err.ChangeTracking: Effortless Property Change Tracking for .NET
 
 [![NuGet](https://img.shields.io/nuget/v/Err.ChangeTracking.svg)](https://www.nuget.org/packages/Err.ChangeTracking)
 [![NuGet](https://img.shields.io/nuget/v/Err.ChangeTracking.SourceGenerator.svg)](https://www.nuget.org/packages/Err.ChangeTracking.SourceGenerator)
 
-> A complete, high-performance, AOT-friendly solution to track changes on POCO models — combining runtime efficiency and compile-time generation.
+## 🚀 The Problem We Solve
 
----
+Have you ever faced these challenges in your .NET applications?
 
-# 📚 Introduction
+- **No Entity Framework available**, but you still need to track object changes
+- **Overhead of reflection-based change tracking** slowing down your application
+- **Complex manual property change notification** code cluttering your models
+- Need for **AOT compilation support** with Blazor, MAUI, or NativeAOT
 
-Managing changes on POCO models is a common but tedious problem. Manually tracking modifications leads to verbose code, maintenance headaches, and runtime inefficiency.
+Traditional change tracking solutions involve verbose boilerplate code or reflection-based approaches that aren't
+AOT-friendly. We needed something better.
 
-**Err.ChangeTracking** provides:
-- A lightweight **runtime** library.
-- A powerful **Roslyn Source Generator** to automate everything at **compile time**.
+## 💡 The Solution: Compile-Time Change Tracking
 
-Result?  
-⚡ Lightning-fast, zero-reflection change tracking ready for Blazor, NativeAOT, Cloud, Web, and Mobile.
+**Err.ChangeTracking** leverages C# 13's revolutionary **partial properties** feature to provide:
 
----
+- **Zero-reflection** change tracking with minimal runtime overhead
+- **Compile-time code generation** that integrates naturally with your models
+- Full **AOT compatibility** for all modern .NET platforms
+- Simple, clean model classes with powerful tracking capabilities
 
-# 🚨 Problem Statement
+## ✨ Key Features
 
-✅ How to detect if a POCO model has been modified?  
-✅ How to rollback changes easily?  
-✅ How to track changes without relying on slow reflection or dynamic proxies?
+- **Track property changes** without manual PropertyChanged events
+- **Collection tracking** for Lists and Dictionaries
+- **Rollback changes** to original values with a single method call
+- **Selectively track properties** using attributes
+- **Zero runtime reflection** for maximum performance
+- **100% AOT compatible** for all modern .NET scenarios
 
-Conventional solutions introduce runtime overhead and are not AOT-friendly.
-
----
-
-# 🛠 Manual Implementation Example (Using Only `Err.ChangeTracking` Runtime)
+Example of auto-tracking:
 
 ```csharp
-using System;
+[Trackable]
+public partial class Person
+{
+    public partial string Name { get; set; } // Auto-tracked!
+}
+
+var person = new Person { Name = "Alice" }.AsTrackable();
+person.Name = "Bob";
+bool hasChanged = person.GetChangeTracker().IsDirty; // True
+```
+
+## 🔮 Why Now?
+
+This solution is made possible by C# 13's **partial properties** feature. Before this innovation, generating property
+implementations with specialized setters required complex runtime proxies or reflection-based approaches. Now we can:
+
+1. Generate efficient, customized property implementations at compile time
+2. Maintain clean, simple model definitions
+3. Achieve zero-reflection tracking for AOT compatibility
+4. Keep runtime overhead at absolute minimum
+
+## 📋 Requirements
+
+This library requires either:
+
+- **.NET 9.0** or higher (recommended), OR
+- **.NET 8.0** with `<LangVersion>preview</LangVersion>` in your project file
+
+The magic happens through C# 13's **partial properties** feature, which unlocks unprecedented compile-time generation
+capabilities.
+
+## 📦 Installation
+
+```shell script
+dotnet add package Err.ChangeTracking
+dotnet add package Err.ChangeTracking.SourceGenerator
+```
+
+## 🔍 Simple Example: Before & After
+
+Our lightweight solution offers two approaches to change tracking:
+
+### Manual Implementation (Fine-grained control when needed)
+
+You can manually implement change tracking with just one line in your property setters:
+
+```csharp
 using Err.ChangeTracking;
 
 public partial class Person : ITrackable<Person>
 {
     private IChangeTracking<Person> _changeTracker;
-    public IChangeTracking<Person> GetChangeTracker() => _changeTracker ??= new ChangeTracking<Person>(this);
+    public IChangeTracking<Person> GetChangeTracker() => _changeTracker ??= ChangeTracking.Create(this);
 
     private string _firstName;
     public partial string FirstName
@@ -47,45 +96,34 @@ public partial class Person : ITrackable<Person>
         get => _firstName;
         set { _changeTracker?.RecordChange(nameof(FirstName), _firstName, value); _firstName = value; }
     }
-
-    private int _age;
-    public partial int Age
-    {
-        get => _age;
-        set { _changeTracker?.RecordChange(nameof(Age), _age, value); _age = value; }
-    }
+    // ...
 }
 ```
 
-**Explanation**:
-- `_changeTracker` monitors the original values.
-- `RecordChange` is called manually inside each setter.
-- `IsDirty`, `Rollback`, and `AcceptChanges` become available.
+This manual approach gives you precise control over when and how changes are recorded, perfect for complex scenarios
+where you need custom validation, notification, or conditional tracking logic.
 
-✅ Powerful — but ✋ very repetitive and error-prone for large models.
+### Automated with Source Generator (Recommended)
 
----
-
-# 🤖 With Err.ChangeTracking.SourceGenerator (Recommended)
-
-Instead of manually writing setters, just annotate your class:
+Thanks to our source generator, you can achieve the same functionality with minimal code:
 
 ```csharp
 [Trackable]
 public partial class Person
 {
-    public partial string FirstName { get; set; }
-    public partial int Age { get; set; }
+    public partial string FirstName { get; set; } // Will be tracked
+    public partial int Age { get; set; } // Will be tracked too
 }
 ```
 
-The **source generator** will auto-generate the backing fields, tracking logic, and setter wrappers.
+The source generator automatically implements:
 
-✅ Keep your models clean, readable, and efficient.
+- The `ITrackable<>` interface
+- Backing fields for properties
+- Property setters with change tracking
+- All the tracking infrastructure
 
----
-
-# ✨ How the Generator Works
+## 🛠️ How the Generator Works
 
 - Class must be marked as `[Trackable]`
 - Class must be `partial`
@@ -100,11 +138,9 @@ The **source generator** will auto-generate the backing fields, tracking logic, 
 | `TrackingMode.All` | (default) track all eligible properties |
 | `TrackingMode.OnlyMarked` | Only track `[TrackOnly]` properties |
 
----
+## 🧪 Examples From Unit Tests
 
-# 🧪 Examples From Unit Tests
-
-## Tracking simple properties
+### Tracking simple properties
 
 ```csharp
 var person = new Person { FirstName = "Alice", Age = 30 }.AsTrackable();
@@ -114,14 +150,14 @@ Assert.True(person.GetChangeTracker().IsDirty);
 Assert.True(person.GetChangeTracker().HasChanged(x => x.FirstName));
 ```
 
-## Rollback a single property
+### Rollback a single property
 
 ```csharp
 person.GetChangeTracker().Rollback(x => x.FirstName);
 Assert.Equal("Alice", person.FirstName);
 ```
 
-## Tracking collections
+### Tracking collections
 
 ```csharp
 [Trackable]
@@ -137,7 +173,7 @@ order.Items.AsTrackable().Add("New Item");
 Assert.True(order.GetChangeTracker().IsDirty);
 ```
 
-## TrackingMode OnlyMarked with [TrackOnly]
+### TrackingMode OnlyMarked with [TrackOnly]
 
 ```csharp
 [Trackable(Mode = TrackingMode.OnlyMarked)]
@@ -158,62 +194,114 @@ Assert.True(invoice.GetChangeTracker().HasChanged(x => x.InvoiceNumber));
 Assert.False(invoice.GetChangeTracker().HasChanged(x => x.Comment));
 ```
 
----
+## 🏁 Conclusion
 
-# 🚀 Typical Use Cases
+Err.ChangeTracking provides an elegant, modern solution to an age-old problem. It's perfect for applications that:
 
-- Change tracking in CRUD applications
-- Undo/Redo features
-- Form validation and dirty detection
-- Optimizing entity update operations
+- Need change tracking without Entity Framework
+- Require AOT compilation support
+- Want to avoid complex INotifyPropertyChanged implementations
+- Need optimized, lightweight change detection
 
----
+Start using Err.ChangeTracking today and experience the power of compile-time property tracking with zero runtime
+reflection!
 
-# 📦 Requirements
-
-**IMPORTANT:** This package uses C# 13 feature _**Patrial properties**_ and requires either:
-
-- .NET 9.0 or higher, OR
-- .NET 8.0 with LangVersion set to "preview" in your project file
-
-If you're using .NET 8.0, add the following to your project file:
-
-``` xml
-<PropertyGroup>
-    <LangVersion>preview</LangVersion>
-</PropertyGroup>
-```
-
-! Without this configuration, the source generator will not work correctly.
-
-# 📦 Installation
-
-```bash
-dotnet add package Err.ChangeTracking
-
-dotnet add package Err.ChangeTracking.SourceGenerator
-```
-
-
----
-
-# 📋 License
+## 📝 License
 
 Licensed under the [MIT License](LICENSE).
 
 ---
 
-# 🔥 Related Projects
+## 🚀 Bonus: More Typical Use Cases
 
-- [Err.ChangeTracking](https://www.nuget.org/packages/Err.ChangeTracking) — Runtime library
-- [Err.ChangeTracking.SourceGenerator](https://www.nuget.org/packages/Err.ChangeTracking.SourceGenerator) — Roslyn code generator
+### 3. Form Validation and Dirty Detection
 
----
+Enhance UX by tracking user changes in forms:
 
-# 🙌 Contributions
+```csharp
+// In a Blazor component
+@code {
+    private UserProfileForm _form = new UserProfileForm().AsTrackable();
+    
+    private async Task SaveChanges()
+    {
+        if (!_form.GetChangeTracker().IsDirty)
+        {
+            NotificationService.Info("No changes to save");
+            return;
+        }
+        
+        var changedProperties = _form.GetChangeTracker().GetChangedProperties();
+        // Validate only changed fields ...
+        
+        // Save changes
+        await UserService.UpdateProfileAsync(_form);
+        _form.GetChangeTracker().AcceptChanges();
+        
+        NotificationService.Success("Profile updated successfully");
+    }
+    
+    private void DiscardChanges()
+    {
+        if (_form.GetChangeTracker().IsDirty)
+        {
+            _form.GetChangeTracker().Rollback();
+            NotificationService.Info("Changes discarded");
+        }
+    }
+}
+```
 
-Contributions are welcome!  
-Fork the repository, submit a PR, or open an issue to suggest improvements!
+### 1. Smart Repository Operations
+
+Optimize database operations by only updating what changed:
+
+```csharp
+public class OrderRepository
+{
+    public async Task SaveAsync(Order order)
+    {
+        var tracker = order.GetChangeTracker();
+        
+        if (!tracker.IsDirty)
+            return; // Nothing to save
+        
+        // Get only the changed properties
+        var changes = tracker.GetChangedProperties();
+        
+        // Build SQL with only changed columns
+        var updateColumns = string.Join(", ", changes.Select(p => $"{p} = @{p}"));
+        var sql = $"UPDATE Orders SET {updateColumns} WHERE Id = @Id";
+        
+        await _db.ExecuteAsync(sql, order);
+        tracker.AcceptChanges();
+    }
+}
+```
+
+### 2. Domain Events with Change Detection
+
+Publish specific events based on detected changes:
+
+```csharp
+public class OrderService
+{
+    public async Task UpdateOrderAsync(Order order)
+    {
+        await _repository.SaveAsync(order);
+        
+        var tracker = order.GetChangeTracker();
+        
+        if (tracker.HasChanged(x => x.Status))
+        {
+            var originalStatus = (OrderStatus)tracker.GetOriginalValues()[nameof(Order.Status)];
+            _eventPublisher.Publish(new OrderStatusChangedEvent(
+                order.Id, originalStatus, order.Status
+            ));
+        }
+    }
+}
+```
 
 ---
 

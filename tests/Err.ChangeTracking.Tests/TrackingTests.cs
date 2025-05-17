@@ -157,7 +157,7 @@ public class OrderTrackingTests
         var itemTracker = order.Items[0].GetChangeTracker();
         Assert.True(itemTracker.IsDirty);
         Assert.True(itemTracker.HasChanged(nameof(OrderItem.Quantity)));
-        Assert.Equal(initialQuantity, itemTracker.GetOriginalValues()[nameof(OrderItem.Quantity)]);
+        Assert.Equal(initialQuantity, itemTracker.GetOriginalValue(i => i.Quantity));
         Assert.Equal(5, order.Items[0].Quantity);
     }
 

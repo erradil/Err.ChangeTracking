@@ -233,7 +233,7 @@ public class ChangeTrackingGenerator : IIncrementalGenerator
     /// {
     ///     // ITrackable interface implementation
     ///     private IChangeTracking&lt;Person&gt;? _changeTracker;
-    ///     public IChangeTracking&lt;Person&gt; GetChangeTracker() => _changeTracker ??= new ChangeTracking&lt;Person&gt;(this);
+    ///     public IChangeTracking&lt;Person&gt; GetChangeTracker() => _changeTracker ??= ChangeTracking.Create(this);
     ///     
     ///     // Property implementations...
     /// }
@@ -249,7 +249,7 @@ public class ChangeTrackingGenerator : IIncrementalGenerator
     ///         // ITrackable interface implementation
     ///         private IChangeTracking&lt;OuterClass.InnerClass&gt;? _changeTracker;
     ///         public IChangeTracking&lt;OuterClass.InnerClass&gt; GetChangeTracker() => 
-    ///             _changeTracker ??= new ChangeTracking&lt;OuterClass.InnerClass&gt;(this);
+    ///             _changeTracker ??= ChangeTracking.Create(this);
     ///         
     ///         // Property implementations...
     ///     }
@@ -346,7 +346,7 @@ public class ChangeTrackingGenerator : IIncrementalGenerator
     /// <code>
     /// // ITrackable interface implementation
     /// private IChangeTracking&lt;Person&gt;? _changeTracker;
-    /// public IChangeTracking&lt;Person&gt; GetChangeTracker() => _changeTracker ??= new ChangeTracking&lt;Person&gt;(this);
+    /// public IChangeTracking&lt;Person&gt; GetChangeTracker() => _changeTracker ??= ChangeTracking.Create(this);
     /// </code>
     /// </remarks>
     private static void GenerateTrackingImplementation(StringBuilder sourceBuilder, string typeName, string indent)
@@ -354,7 +354,7 @@ public class ChangeTrackingGenerator : IIncrementalGenerator
         sourceBuilder.AppendLine($"{indent}// ITrackable interface implementation")
             .AppendLine($"{indent}private {Constants.Types.IChangeTrackingFullName}<{typeName}>? _changeTracker;")
             .AppendLine(
-                $"{indent}public {Constants.Types.IChangeTrackingFullName}<{typeName}> GetChangeTracker() => _changeTracker ??= new {Constants.Types.ChangeTrackingFullName}<{typeName}>(this);")
+                $"{indent}public {Constants.Types.IChangeTrackingFullName}<{typeName}> GetChangeTracker() => _changeTracker ??= {Constants.Types.ChangeTrackingFullName}.Create(this);")
             .AppendLine();
     }
 

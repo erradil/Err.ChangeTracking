@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.Linq.Expressions;
 
-namespace Err.ChangeTracking;
+namespace Err.ChangeTracking.Internals;
 
-public class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEntity>
+internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEntity>
 {
-    private static readonly Lazy<Dictionary<string, Action<TEntity, object?>>> PropertySetters =
-        new(BuildPropertySetters);
+    private static readonly Lazy<Dictionary<string, Action<TEntity, object?>>> _propertiesSettersImpl =
+        new(PropertyHelper.BuildPropertySetters<TEntity>);
 
     private static readonly IReadOnlyDictionary<string, object?> _emptyChanges = new Dictionary<string, object?>();
 
@@ -27,16 +27,35 @@ public class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEntity
         return _originalValues ?? _emptyChanges;
     }
 
+    public TProperty? GetOriginalValue<TProperty>(Expression<Func<TEntity, TProperty>> propertyExpression)
+    {
+        var propertyName = PropertyHelper.GetPropertyName(propertyExpression);
+        return GetOriginalValue<TProperty>(propertyName);
+    }
+
+    public TProperty? GetOriginalValue<TProperty>(string propertyName)
+    {
+        if (_originalValues?.TryGetValue(propertyName, out var value) is true) return (TProperty?)value;
+
+        return default;
+    }
+
+    public IReadOnlyCollection<string> GetChangedProperties()
+    {
+        return _originalValues?.Keys ?? (IReadOnlyCollection<string>)_emptyChanges.Keys;
+    }
+
     public bool HasChanged(string propertyName)
     {
         return _originalValues?.ContainsKey(propertyName) ?? false;
     }
 
-    public bool HasChanged(Expression<Func<TEntity, object?>> propertyExpression)
+    public bool HasChanged<TProperty>(Expression<Func<TEntity, TProperty>> propertyExpression)
     {
-        var propertyName = GetPropertyName(propertyExpression);
+        var propertyName = PropertyHelper.GetPropertyName(propertyExpression);
         return HasChanged(propertyName);
     }
+
 
     public void RecordChange<TProperty>(string propertyName, TProperty? currentValue, TProperty? newValue)
     {
@@ -65,7 +84,7 @@ public class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEntity
         IsEnabled = false; // Disable tracking temporarily to avoid recording changes when restoring original value
 
         foreach (var keyValue in _originalValues)
-            if (PropertySetters.Value.TryGetValue(keyValue.Key, out var setter))
+            if (_propertiesSettersImpl.Value.TryGetValue(keyValue.Key, out var setter))
                 setter(instance, keyValue.Value);
 
         IsEnabled = true; // Re-enable tracking after rollback
@@ -80,7 +99,7 @@ public class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEntity
             return;
 
         if (!_originalValues.TryGetValue(propertyName, out var originalValue) ||
-            !PropertySetters.Value.TryGetValue(propertyName, out var setter))
+            !_propertiesSettersImpl.Value.TryGetValue(propertyName, out var setter))
             return;
 
         IsEnabled = false; // Disable tracking temporarily to avoid recording changes when restoring original value
@@ -93,9 +112,9 @@ public class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEntity
             IsDirty = false;
     }
 
-    public void Rollback(Expression<Func<TEntity, object?>> propertyExpression)
+    public void Rollback<TProperty>(Expression<Func<TEntity, TProperty>> propertyExpression)
     {
-        var propertyName = GetPropertyName(propertyExpression);
+        var propertyName = PropertyHelper.GetPropertyName(propertyExpression);
         Rollback(propertyName);
     }
 
@@ -112,42 +131,9 @@ public class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEntity
             IsDirty = false;
     }
 
-    public void AcceptChanges(Expression<Func<TEntity, object?>> propertyExpression)
+    public void AcceptChanges<TProperty>(Expression<Func<TEntity, TProperty>> propertyExpression)
     {
-        var propertyName = GetPropertyName(propertyExpression);
+        var propertyName = PropertyHelper.GetPropertyName(propertyExpression);
         AcceptChanges(propertyName);
-    }
-
-    private static string GetPropertyName<T>(Expression<Func<T, object?>> propertyExpression)
-    {
-        return propertyExpression.Body switch
-        {
-            UnaryExpression { Operand: MemberExpression member } => member.Member.Name,
-            MemberExpression directMember => directMember.Member.Name,
-            _ => throw new ArgumentException("Invalid expression. Expected property access.")
-        };
-    }
-
-    private static Dictionary<string, Action<TEntity, object?>> BuildPropertySetters()
-    {
-        var setters = new Dictionary<string, Action<TEntity, object?>>();
-        foreach (var prop in typeof(TEntity).GetProperties())
-        {
-            if (!prop.CanWrite)
-                continue;
-
-            var instanceParam = Expression.Parameter(typeof(TEntity));
-            var valueParam = Expression.Parameter(typeof(object));
-
-            var body = Expression.Assign(
-                Expression.Property(instanceParam, prop),
-                Expression.Convert(valueParam, prop.PropertyType)
-            );
-
-            var lambda = Expression.Lambda<Action<TEntity, object?>>(body, instanceParam, valueParam);
-            setters[prop.Name] = lambda.Compile();
-        }
-
-        return setters;
     }
 }
