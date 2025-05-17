@@ -351,11 +351,16 @@ public class ChangeTrackingGenerator : IIncrementalGenerator
     /// </remarks>
     private static void GenerateTrackingImplementation(StringBuilder sourceBuilder, string typeName, string indent)
     {
-        sourceBuilder.AppendLine($"{indent}// ITrackable interface implementation")
-            .AppendLine($"{indent}private {Constants.Types.IChangeTrackingFullName}<{typeName}>? _changeTracker;")
-            .AppendLine(
-                $"{indent}public {Constants.Types.IChangeTrackingFullName}<{typeName}> GetChangeTracker() => _changeTracker ??= {Constants.Types.ChangeTrackingFullName}.Create(this);")
-            .AppendLine();
+        sourceBuilder
+            .AppendLine($$"""
+                          {{indent}}// ITrackable interface implementation
+                          {{indent}}private {{Constants.Types.IChangeTrackingFullName}}<{{typeName}}>? _changeTracker;
+                          {{indent}}public {{Constants.Types.IChangeTrackingFullName}}<{{typeName}}> GetChangeTracker()
+                          {{indent}}{
+                          {{indent}}     return _changeTracker ??= ChangeTracking.Create(this);
+                          {{indent}}}
+                          """)
+            ;
     }
 
     /// <summary>

@@ -6,9 +6,6 @@ namespace Err.ChangeTracking.Internals;
 
 internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEntity>
 {
-    private static readonly Lazy<Dictionary<string, Action<TEntity, object?>>> _propertiesSettersImpl =
-        new(PropertyHelper.BuildPropertySetters<TEntity>);
-
     private static readonly IReadOnlyDictionary<string, object?> _emptyChanges = new Dictionary<string, object?>();
 
     private Dictionary<string, object?>? _originalValues;
@@ -29,7 +26,7 @@ internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEnti
 
     public TProperty? GetOriginalValue<TProperty>(Expression<Func<TEntity, TProperty>> propertyExpression)
     {
-        var propertyName = PropertyHelper.GetPropertyName(propertyExpression);
+        var propertyName = PropertyHelper<TEntity>.GetPropertyName(propertyExpression);
         return GetOriginalValue<TProperty>(propertyName);
     }
 
@@ -52,7 +49,7 @@ internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEnti
 
     public bool HasChanged<TProperty>(Expression<Func<TEntity, TProperty>> propertyExpression)
     {
-        var propertyName = PropertyHelper.GetPropertyName(propertyExpression);
+        var propertyName = PropertyHelper<TEntity>.GetPropertyName(propertyExpression);
         return HasChanged(propertyName);
     }
 
@@ -84,7 +81,7 @@ internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEnti
         IsEnabled = false; // Disable tracking temporarily to avoid recording changes when restoring original value
 
         foreach (var keyValue in _originalValues)
-            if (_propertiesSettersImpl.Value.TryGetValue(keyValue.Key, out var setter))
+            if (PropertyHelper<TEntity>.PropertiesSettersImpl.Value.TryGetValue(keyValue.Key, out var setter))
                 setter(instance, keyValue.Value);
 
         IsEnabled = true; // Re-enable tracking after rollback
@@ -99,7 +96,7 @@ internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEnti
             return;
 
         if (!_originalValues.TryGetValue(propertyName, out var originalValue) ||
-            !_propertiesSettersImpl.Value.TryGetValue(propertyName, out var setter))
+            !PropertyHelper<TEntity>.PropertiesSettersImpl.Value.TryGetValue(propertyName, out var setter))
             return;
 
         IsEnabled = false; // Disable tracking temporarily to avoid recording changes when restoring original value
@@ -114,7 +111,7 @@ internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEnti
 
     public void Rollback<TProperty>(Expression<Func<TEntity, TProperty>> propertyExpression)
     {
-        var propertyName = PropertyHelper.GetPropertyName(propertyExpression);
+        var propertyName = PropertyHelper<TEntity>.GetPropertyName(propertyExpression);
         Rollback(propertyName);
     }
 
@@ -133,7 +130,7 @@ internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEnti
 
     public void AcceptChanges<TProperty>(Expression<Func<TEntity, TProperty>> propertyExpression)
     {
-        var propertyName = PropertyHelper.GetPropertyName(propertyExpression);
+        var propertyName = PropertyHelper<TEntity>.GetPropertyName(propertyExpression);
         AcceptChanges(propertyName);
     }
 }

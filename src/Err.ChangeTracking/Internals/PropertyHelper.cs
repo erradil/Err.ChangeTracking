@@ -4,19 +4,20 @@ using System.Linq.Expressions;
 
 namespace Err.ChangeTracking.Internals;
 
-internal static class PropertyHelper
+internal static class PropertyHelper<TEntity>
 {
-    internal static string GetPropertyName<TEntity, TProperty>(Expression<Func<TEntity, TProperty>> propertyExpression)
-    {
-        return propertyExpression.Body switch
-        {
-            UnaryExpression { Operand: MemberExpression member } => member.Member.Name,
-            MemberExpression directMember => directMember.Member.Name,
-            _ => throw new ArgumentException("Invalid expression. Expected property access.")
-        };
-    }
+    /// <summary>
+    ///     Lazily initialized dictionary of compiled property setters for performance.
+    /// </summary>
+    internal static readonly Lazy<Dictionary<string, Action<TEntity, object?>>> PropertiesSettersImpl =
+        new(BuildPropertySetters);
 
-    internal static Dictionary<string, Action<TEntity, object?>> BuildPropertySetters<TEntity>()
+    /// <summary>
+    ///     Builds compiled expression-based property setters for all writable properties.
+    ///     This avoids repeated reflection overhead when setting property values.
+    ///     Much faster than using reflection for each property update.
+    /// </summary>
+    private static Dictionary<string, Action<TEntity, object?>> BuildPropertySetters()
     {
         var setters = new Dictionary<string, Action<TEntity, object?>>();
         foreach (var prop in typeof(TEntity).GetProperties())
@@ -37,5 +38,19 @@ internal static class PropertyHelper
         }
 
         return setters;
+    }
+
+    /// <summary>
+    ///     Extracts property name from lambda expression.
+    ///     Handles both direct access (x => x.Name) and boxed value types (x => x.Age where Age is int).
+    /// </summary>
+    internal static string GetPropertyName<TProperty>(Expression<Func<TEntity, TProperty>> propertyExpression)
+    {
+        return propertyExpression.Body switch
+        {
+            UnaryExpression { Operand: MemberExpression member } => member.Member.Name,
+            MemberExpression directMember => directMember.Member.Name,
+            _ => throw new ArgumentException("Invalid expression. Expected property access.")
+        };
     }
 }
