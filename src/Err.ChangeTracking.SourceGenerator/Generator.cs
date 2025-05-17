@@ -355,9 +355,14 @@ public class ChangeTrackingGenerator : IIncrementalGenerator
             .AppendLine($$"""
                           {{indent}}// ITrackable interface implementation
                           {{indent}}private {{Constants.Types.IChangeTrackingFullName}}<{{typeName}}>? _changeTracker;
+                          {{indent}}private readonly object _changeTrackerLock = new object();
                           {{indent}}public {{Constants.Types.IChangeTrackingFullName}}<{{typeName}}> GetChangeTracker()
                           {{indent}}{
-                          {{indent}}     return _changeTracker ??= ChangeTracking.Create(this);
+                          {{indent}}    if (_changeTracker is null)
+                          {{indent}}         lock (_changeTrackerLock)
+                          {{indent}}             return _changeTracker ??= ChangeTracking.Create(this);
+
+                          {{indent}}     return _changeTracker;
                           {{indent}}}
                           """)
             ;
