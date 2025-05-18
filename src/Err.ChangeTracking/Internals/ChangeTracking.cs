@@ -9,14 +9,18 @@ internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEnti
     private static readonly IReadOnlyDictionary<string, object?> _emptyChanges = new Dictionary<string, object?>();
 
     private Dictionary<string, object?>? _originalValues;
-
-    public bool IsDirty { get; private set; }
     public bool IsEnabled { get; private set; }
 
     public IChangeTracking<TEntity> Enable(bool enable = true)
     {
         IsEnabled = enable;
         return this;
+    }
+
+    public bool IsDirty(bool deepTracking = false)
+    {
+        return _originalValues is { Count: > 0 }
+               || (deepTracking && DeepChangeTracking<TEntity>.HasDeepChanges(instance));
     }
 
     public IReadOnlyDictionary<string, object?> GetOriginalValues()
@@ -69,7 +73,6 @@ internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEnti
         else
         {
             _originalValues.Add(propertyName, currentValue);
-            IsDirty = true;
         }
     }
 
@@ -79,15 +82,12 @@ internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEnti
             return;
 
         IsEnabled = false; // Disable tracking temporarily to avoid recording changes when restoring original value
-
-        foreach (var keyValue in _originalValues)
-            if (PropertyHelper<TEntity>.PropertiesSettersImpl.Value.TryGetValue(keyValue.Key, out var setter))
-                setter(instance, keyValue.Value);
+        foreach (var (propertyName, originalValue) in _originalValues)
+            PropertyHelper<TEntity>.TrySetProperty(instance, propertyName, originalValue);
 
         IsEnabled = true; // Re-enable tracking after rollback
 
         _originalValues.Clear();
-        IsDirty = false;
     }
 
     public void Rollback(string propertyName)
@@ -95,18 +95,14 @@ internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEnti
         if (!IsEnabled || instance == null || _originalValues == null)
             return;
 
-        if (!_originalValues.TryGetValue(propertyName, out var originalValue) ||
-            !PropertyHelper<TEntity>.PropertiesSettersImpl.Value.TryGetValue(propertyName, out var setter))
+        if (!_originalValues.TryGetValue(propertyName, out var originalValue))
             return;
 
         IsEnabled = false; // Disable tracking temporarily to avoid recording changes when restoring original value
-        setter(instance, originalValue);
+        PropertyHelper<TEntity>.TrySetProperty(instance, propertyName, originalValue);
         IsEnabled = true; // Re-enable tracking after rollback
 
         _originalValues.Remove(propertyName);
-
-        if (_originalValues.Count == 0)
-            IsDirty = false;
     }
 
     public void Rollback<TProperty>(Expression<Func<TEntity, TProperty>> propertyExpression)
@@ -118,14 +114,11 @@ internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEnti
     public void AcceptChanges()
     {
         _originalValues?.Clear();
-        IsDirty = false;
     }
 
     public void AcceptChanges(string propertyName)
     {
         _originalValues?.Remove(propertyName);
-        if (_originalValues is { Count: 0 })
-            IsDirty = false;
     }
 
     public void AcceptChanges<TProperty>(Expression<Func<TEntity, TProperty>> propertyExpression)

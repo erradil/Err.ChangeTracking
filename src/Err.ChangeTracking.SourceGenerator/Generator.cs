@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -67,7 +68,8 @@ public class ChangeTrackingGenerator : IIncrementalGenerator
             Accessibility = typeSymbol.DeclaredAccessibility,
             Modifiers = SymbolHelper.GetTypeModifiers(typeSymbol),
             ContainingTypeInfos = SymbolHelper.ExtractContainingTypeInfos(typeSymbol),
-            AlreadyImplementsTrackable = SymbolHelper.ImplementsTrackableInterface(typeSymbol),
+            AlreadyImplementsTrackable =
+                SymbolHelper.ImplementsInterface(typeSymbol, Constants.Types.ITrackableFullName),
             Properties = properties
         };
 
@@ -87,14 +89,19 @@ public class ChangeTrackingGenerator : IIncrementalGenerator
 
         foreach (var member in typeSymbol.GetMembers().OfType<IPropertySymbol>())
         {
+            // If the type is already TrackableList or TrackableDictionary, not need to track
+            var alreadyTrackableCollection =
+                SymbolHelper.IsTypeOf(member, Constants.Types.TrackableDictionaryFullName) ||
+                SymbolHelper.IsTypeOf(member, Constants.Types.TrackableListFullName);
+
             // Skip non-partial properties
-            if (!member.IsPartial())
+            if (!member.IsPartial() && !alreadyTrackableCollection)
                 continue;
 
             // Check property attributes
             var isTrackOnly = SymbolHelper.HasAttribute(member, Constants.Types.TrackOnlyAttributeFullName);
             var isNotTracked = SymbolHelper.HasAttribute(member, Constants.Types.NotTrackedAttributeFullName);
-            var hasTrackCollection =
+            var hasTrackCollectionAttr =
                 SymbolHelper.HasAttribute(member, Constants.Types.TrackCollectionAttributeFullName);
 
             // If explicitly marked not to track, then don't track
@@ -105,13 +112,12 @@ public class ChangeTrackingGenerator : IIncrementalGenerator
             if (trackingMode == TrackingMode.OnlyMarked && !isTrackOnly)
                 continue;
 
-            // If the type is already TrackableList or TrackableDictionary, not need to track
-            if (member.IsTypeOf(Constants.Types.TrackableDictionaryFullName) ||
-                member.IsTypeOf(Constants.Types.TrackableListFullName))
-                continue;
+
+            var isTrackableEntity =
+                SymbolHelper.ImplementsInterface(member.Type as INamedTypeSymbol, Constants.Types.ITrackableFullName);
 
             // We've determined this property should be tracked, now check if it's a collection
-            var (isTrackCollection, collectionWrapperType) = SymbolHelper.IsTrackableCollection(member);
+            var (isTrackableCollection, collectionWrapperType) = SymbolHelper.IsTrackableCollection(member);
 
             var trackableProperty = new PropertyInfo
             {
@@ -129,11 +135,13 @@ public class ChangeTrackingGenerator : IIncrementalGenerator
                 IsSetterInitOnly = member.SetMethod?.IsInitOnly ?? false,
                 GetterAccessibility = member.GetMethod?.DeclaredAccessibility ?? Accessibility.NotApplicable,
                 SetterAccessibility = member.SetMethod?.DeclaredAccessibility ?? Accessibility.NotApplicable,
-                IsTrackCollection = isTrackCollection,
+                IsTrackableCollection = isTrackableCollection,
                 CollectionWrapperType = collectionWrapperType,
                 IsNullable = member.Type.NullableAnnotation == NullableAnnotation.Annotated,
                 IsTrackOnly = isTrackOnly,
-                HasTrackCollection = hasTrackCollection
+                HasTrackCollectionAttributeAttribute = hasTrackCollectionAttr,
+                AlreadyTrackableCollection = alreadyTrackableCollection,
+                IsTrackableEntity = isTrackableEntity
             };
 
             properties.Add(trackableProperty);
@@ -177,7 +185,10 @@ public class ChangeTrackingGenerator : IIncrementalGenerator
         // Add namespace if needed
         if (typeInfo.Namespace != null)
         {
-            sourceBuilder.AppendLine($"namespace {typeInfo.Namespace};")
+            sourceBuilder
+                .AppendLine("using Err.ChangeTracking;")
+                .AppendLine()
+                .AppendLine($"namespace {typeInfo.Namespace};")
                 .AppendLine();
         }
 
@@ -292,7 +303,7 @@ public class ChangeTrackingGenerator : IIncrementalGenerator
                 );
 
                 sourceBuilder.AppendLine(
-                        $"{indentStr}{containingTypeDeclaration.Replace($" : {Constants.Types.ITrackableFullName}<{containingType.Name}>", "")}")
+                        $"{indentStr}{containingTypeDeclaration.Replace($" : {Constants.Types.ITrackableFullName.Replace("<T>", $"<{containingType.Name}>")}", "")}")
                     .AppendLine($"{indentStr}{{");
 
                 indent++;
@@ -320,6 +331,7 @@ public class ChangeTrackingGenerator : IIncrementalGenerator
             GenerateTrackingImplementation(sourceBuilder, typeName, GetIndentation(indent));
         }
 
+        GenerateEntityStaticConstructor(sourceBuilder, typeInfo, GetIndentation(indent));
         // Generate each property
         foreach (var property in typeInfo.Properties)
         {
@@ -354,16 +366,9 @@ public class ChangeTrackingGenerator : IIncrementalGenerator
         sourceBuilder
             .AppendLine($$"""
                           {{indent}}// ITrackable interface implementation
-                          {{indent}}private {{Constants.Types.IChangeTrackingFullName}}<{{typeName}}>? _changeTracker;
-                          {{indent}}private readonly object _changeTrackerLock = new object();
-                          {{indent}}public {{Constants.Types.IChangeTrackingFullName}}<{{typeName}}> GetChangeTracker()
-                          {{indent}}{
-                          {{indent}}    if (_changeTracker is null)
-                          {{indent}}         lock (_changeTrackerLock)
-                          {{indent}}             return _changeTracker ??= ChangeTracking.Create(this);
-
-                          {{indent}}     return _changeTracker;
-                          {{indent}}}
+                          {{indent}}private {{Constants.Types.IChangeTrackingFullName.Replace("<T>", $"<{typeName}>")}}? _changeTracker;
+                          {{indent}}public {{Constants.Types.IChangeTrackingFullName.Replace("<T>", $"<{typeName}>")}} GetChangeTracker() => _changeTracker ??= ChangeTracking.Create(this);
+                          {{indent}}    
                           """)
             ;
     }
@@ -385,11 +390,66 @@ public class ChangeTrackingGenerator : IIncrementalGenerator
 
         // Add the ITrackable<T> interface if not already implemented
         var interfaceImplementation = typeInfo.AlreadyImplementsTrackable is false
-            ? $" : {Constants.Types.ITrackableFullName}<{typeName}>"
+            ? $" : {Constants.Types.ITrackableFullName.Replace("<T>", $"<{typeName}>")}"
             : "";
 
         return
             $"{accessibility} {modifiersWithSpace}{Constants.Keywords.PartialKeyword} {typeInfo.Kind} {typeInfo.Name}{interfaceImplementation}";
+    }
+
+    /// <summary>
+    ///     Generates a static constructor that initializes deep change tracking for the entity.
+    /// </summary>
+    /// <remarks>
+    ///     Example generated code:
+    ///     <code>
+    /// static Model()
+    /// {
+    ///     // we identify all trackable properties for deep tracking
+    ///     DeepChangeTracking&lt;Model&gt;.SetDeepTrackableProperties([
+    ///         x => x.SubModel?.GetChangeTracker(), // if property is Trackable&lt;T&gt;
+    ///         x => x.Items as ITrackableCollection // if property Is ITrackableCollection
+    ///     ]);
+    /// }
+    ///     </code>
+    /// </remarks>
+    private static void GenerateEntityStaticConstructor(StringBuilder sourceBuilder, TypeInfo typeInfo, string indent)
+    {
+        // Get all properties that are either trackable entities or collections
+        var trackableProperties = typeInfo.Properties.Where(p =>
+            p.AlreadyTrackableCollection ||
+            p.IsTrackableCollection ||
+            p.IsTrackableEntity).ToList();
+
+        if (trackableProperties.Count == 0)
+            return;
+
+        sourceBuilder.AppendLine(
+            $$"""
+              {{indent}}static {{typeInfo.Name}}()
+              {{indent}}{
+              {{indent}}    // Get all properties that are either trackable entities or collections
+              {{indent}}    DeepChangeTracking<{{typeInfo.Name}}>.SetDeepTrackableProperties([
+              """);
+
+        // Generate delegates for each trackable property
+        foreach (var property in trackableProperties)
+        {
+            if (property.IsTrackableEntity)
+            {
+                sourceBuilder.AppendLine($"{indent}         x => x.{property.Name}?.GetChangeTracker(),");
+            }
+            else if (property.IsTrackableCollection || property.AlreadyTrackableCollection)
+            {
+                sourceBuilder.AppendLine($"{indent}         x => x.{property.Name} as ITrackableCollection,");
+            }
+        }
+
+        sourceBuilder.AppendLine($$"""
+                                   {{indent}}     ]);
+                                   {{indent}}}
+                                   """);
+        sourceBuilder.AppendLine();
     }
 
     #endregion
@@ -425,13 +485,17 @@ public class ChangeTrackingGenerator : IIncrementalGenerator
     /// </remarks>
     private static void GenerateProperty(StringBuilder sourceBuilder, PropertyInfo property, string indent)
     {
+        // no need to generate partial property for already trackable property
+        if (property.AlreadyTrackableCollection)
+            return;
+
         // Add comment explaining why this property is tracked
         if (property.IsTrackOnly)
             sourceBuilder.AppendLine($"{indent}// This property is tracked because it has the [TrackOnly] attribute");
         else
             sourceBuilder.AppendLine($"{indent}// This property is tracked by default based on TrackingMode.All");
 
-        if (property.HasTrackCollection)
+        if (property.HasTrackCollectionAttributeAttribute)
             sourceBuilder.AppendLine(
                 $"{indent}// Using trackable collection wrapper due to [TrackCollection] attribute");
 

@@ -30,4 +30,15 @@
         <ProjectReference Include="..\..\src\Err.ChangeTracking.SourceGenerator\Err.ChangeTracking.SourceGenerator.csproj"/>
     </ItemGroup>
 
+    <ItemGroup>
+        <Compile Remove="Model.cs"/>
+        <Compile Remove="Model.g.cs"/>
+        <Content Include="Model.cs">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include="Model.g.cs">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+
 </Project>

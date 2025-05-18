@@ -13,10 +13,15 @@ public static class ChangeTracking
     }
 }
 
-public interface IChangeTracking<TEntity>
+public interface IBaseTracking
+{
+    bool IsDirty(bool deepTracking = false);
+}
+
+public interface IChangeTracking<TEntity> : IBaseTracking
 {
     bool IsEnabled { get; }
-    bool IsDirty { get; }
+    //bool IsDirty { get; }
 
     public IChangeTracking<TEntity> Enable(bool enable = true);
 

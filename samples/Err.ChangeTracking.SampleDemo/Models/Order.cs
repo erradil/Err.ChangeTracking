@@ -29,7 +29,10 @@ public partial record Order
     [TrackCollection] public partial List<OrderItem> Items { get; set; }
 
     // Case 6: Non-partial property (won't be tracked)
-    public string Notes { get; set; }
+    public string? Notes { get; set; }
+
+    // Case 7: Already by default trackable property
+    public TrackableList<string>? Options { get; set; }
 }
 
 // Case 7: Another trackable class for order items

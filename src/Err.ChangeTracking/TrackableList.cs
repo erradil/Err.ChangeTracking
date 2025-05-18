@@ -13,16 +13,19 @@ public class TrackableList<T> : List<T>, ITrackableCollection, IEnumerable<T>
     {
     }
 
-    public TrackableList(IEnumerable<T> items)
+    public TrackableList(IEnumerable<T>? items)
     {
         if (items == null) return;
-        foreach (var item in items) base.Add(item.AsTrackable());
+        foreach (var item in items)
+            base.Add(item.AsTrackable());
     }
 
 
-    public bool IsDirty =>
-        _hasStructuralChanges ||
-        this.OfType<ITrackable<T>>().Any(x => x.GetChangeTracker().IsDirty);
+    public bool IsDirty(bool deepTracking = false)
+    {
+        return _hasStructuralChanges ||
+               this.OfType<ITrackable<T>>().Any(x => x.GetChangeTracker().IsDirty(deepTracking));
+    }
 
     public new T this[int index]
     {
