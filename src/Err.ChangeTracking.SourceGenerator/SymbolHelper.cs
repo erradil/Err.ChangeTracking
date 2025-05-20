@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -23,7 +24,7 @@ internal static class SymbolHelper
     /// <summary>
     /// Check if a type is already a trackable collection
     /// </summary>
-    public static (bool isTrackCollection, string? collectionWrapperType ) IsTrackableCollection(
+    public static (bool isTrackableCollection, string? collectionWrapperType) IsTrackableCollection(
         IPropertySymbol? propertySymbol)
     {
         if (propertySymbol?.Type is not INamedTypeSymbol namedType)
@@ -34,14 +35,16 @@ internal static class SymbolHelper
         // No need to track if already a trackable type
         if (typeName.StartsWith(Constants.Types.TrackableListFullName) ||
             typeName.StartsWith(Constants.Types.TrackableDictionaryFullName))
-            return (false, null);
+            return (true, null);
 
         var (isCollection, collectionWrapperType) = typeName switch
         {
             "System.Collections.Generic.List<T>" =>
                 (isCollection: true, collectionWrapperType: Constants.Types.TrackableListFullName),
+
             "System.Collections.Generic.Dictionary<TKey, TValue>" =>
                 (isCollection: true, collectionWrapperType: Constants.Types.TrackableDictionaryFullName),
+
             _ => (isCollection: false, collectionWrapperType: null)
         };
 
@@ -50,24 +53,38 @@ internal static class SymbolHelper
             return (false, null);
 
         // Check if the property has a TrackCollectionAttribute
-        var isTrackCollection = HasAttribute(propertySymbol, Constants.Types.TrackCollectionAttributeFullName);
-        if (!isTrackCollection)
+        var isTrackableCollection = HasAttribute(propertySymbol, Constants.Types.TrackCollectionAttributeFullName);
+        if (!isTrackableCollection)
             return (false, null);
 
         var genericArgs = string.Join(", ",
             namedType.TypeArguments.Select(t => t.OriginalDefinition.ToDisplayString()).ToList());
-        return (isTrackCollection, $"{collectionWrapperType}<{genericArgs}>");
+        return (isTrackableCollection, $"{collectionWrapperType?.ReplacePattern(@"(\w+)<.*>", $"$1<{genericArgs}>")}");
     }
 
-    /// <summary>
-    /// Check if a type implements ITrackable<T> interface
-    /// </summary>
-    public static bool ImplementsTrackableInterface(INamedTypeSymbol typeSymbol)
-    {
-        foreach (var interfaceSymbol in typeSymbol.AllInterfaces)
-            if (interfaceSymbol.OriginalDefinition.ToDisplayString().StartsWith(Constants.Types.ITrackableFullName))
-                return true;
 
+    /// <summary>
+    /// Checks if a type implements a specific interface (either directly or through inheritance)
+    /// </summary>
+    public static bool ImplementsInterface(INamedTypeSymbol? typeSymbol, string interfaceFullName)
+    {
+        // Early return if type is null
+        if (typeSymbol == null)
+            return false;
+
+        // Check if the type directly implements the interface
+        foreach (var iface in typeSymbol.AllInterfaces)
+        {
+            // For non-generic interfaces, just compare the full name
+            if (iface.OriginalDefinition.ToDisplayString() == interfaceFullName)
+                return true;
+        }
+
+        // If this is a derived type, check its base type recursively
+        if (typeSymbol.BaseType != null && typeSymbol.BaseType.SpecialType != SpecialType.System_Object)
+            return ImplementsInterface(typeSymbol.BaseType, interfaceFullName);
+
+        // No match found
         return false;
     }
 
@@ -162,13 +179,14 @@ internal static class SymbolHelper
     }
 
 
-    public static bool IsTypeOf(this IPropertySymbol propertySymbol, string typeFullName)
+    public static bool IsTypeOf(IPropertySymbol propertySymbol, string typeFullName)
     {
         var propertyType = propertySymbol.Type;
 
         if (propertyType is not INamedTypeSymbol namedType)
             return false;
-
+        var fullTypeName = namedType.ToDisplayString();
+        var namespaceName = namedType.ContainingNamespace.ToDisplayString();
         var originalDef = namedType.OriginalDefinition.ToDisplayString();
         return originalDef == typeFullName;
     }
@@ -188,5 +206,10 @@ internal static class SymbolHelper
         }
 
         return false;
+    }
+
+    public static string ReplacePattern(this string input, string pattern, string replacement)
+    {
+        return Regex.Replace(input, pattern, replacement);
     }
 }

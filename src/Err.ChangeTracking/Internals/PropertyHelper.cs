@@ -53,4 +53,18 @@ internal static class PropertyHelper<TEntity>
             _ => throw new ArgumentException("Invalid expression. Expected property access.")
         };
     }
+
+    /// <summary>
+    ///     Sets a property value using cached setters for performance. Returns success status.
+    /// </summary>
+    internal static bool TrySetProperty<TProperty>(TEntity instance, string propertyName, TProperty value)
+    {
+        if (PropertiesSettersImpl.Value.TryGetValue(propertyName, out var setter))
+        {
+            setter(instance, value);
+            return true;
+        }
+
+        return false;
+    }
 }

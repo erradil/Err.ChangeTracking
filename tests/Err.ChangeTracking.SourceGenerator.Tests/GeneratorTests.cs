@@ -7,21 +7,7 @@ namespace Err.ChangeTracking.SourceGenerator.Tests;
 
 public class GeneratorTests
 {
-    private const string PersonClassText = """
-                                           namespace Err.ChangeTracking.SampleDemo.Models;
-
-                                           [Trackable]
-                                           internal partial record Person
-                                           {
-                                               public partial string Name { get; set; }
-
-                                               [Trackable]
-                                               public partial struct Address
-                                               {
-                                                   public partial string Street { get; set; }
-                                               }
-                                           }
-                                           """;
+    private static readonly string PersonClassText = File.ReadAllText("Model.cs");
 
     // Minimal Trackable attribute implementation for testing
     private const string ChangeTrackingText = """
@@ -67,14 +53,14 @@ public class GeneratorTests
 
         // Verify Person.g.cs was generated
         var PersonGeneratedTree = runResult.GeneratedTrees
-            .FirstOrDefault(t => t.FilePath.EndsWith("Err.ChangeTracking.SampleDemo.Models.Person.g.cs"));
+            .FirstOrDefault(t => t.FilePath.EndsWith("Err.ChangeTracking.SourceGenerator.Tests.Person.g.cs"));
 
         Assert.NotNull(PersonGeneratedTree);
         //Assert.Equal(ExpectedPersonGeneratedText, PersonGeneratedTree.GetText().ToString(), ignoreLineEndingDifferences: true, ignoreWhiteSpaceDifferences: true);
 
         // Verify nested Address struct was properly generated
         var addressGeneratedTree = runResult.GeneratedTrees
-            .FirstOrDefault(t => t.FilePath.EndsWith("Err.ChangeTracking.SampleDemo.Models.Person.Address.g.cs"));
+            .FirstOrDefault(t => t.FilePath.EndsWith("Err.ChangeTracking.SourceGenerator.Tests.Person.Address.g.cs"));
 
         Assert.NotNull(addressGeneratedTree);
         //Assert.Equal(ExpectedAddressGeneratedText, addressGeneratedTree.GetText().ToString(), ignoreLineEndingDifferences: true, ignoreWhiteSpaceDifferences:true);

@@ -74,7 +74,7 @@ internal record struct TypeInfo
 
         // Add namespace if not global
         if (!string.IsNullOrEmpty(Namespace))
-            parts.Add(Namespace);
+            parts.Add(Namespace!);
 
         // Add containing types
         foreach (var containingType in ContainingTypeInfos)
@@ -106,9 +106,11 @@ internal record struct PropertyInfo
     public bool IsSetterInitOnly { get; set; }
     public Accessibility GetterAccessibility { get; set; }
     public Accessibility SetterAccessibility { get; set; }
-    public bool IsTrackCollection { get; set; }
+    public bool IsTrackableCollection { get; set; }
     public string? CollectionWrapperType { get; set; }
     public bool IsNullable { get; set; }
     public bool IsTrackOnly { get; set; }
-    public bool HasTrackCollection { get; set; }
+    public bool HasTrackCollectionAttributeAttribute { get; set; }
+    public bool AlreadyTrackableCollection { get; set; }
+    public bool IsTrackableEntity { get; set; }
 }

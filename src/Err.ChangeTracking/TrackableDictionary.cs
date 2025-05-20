@@ -31,9 +31,11 @@ public class TrackableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, ITrac
     }
 
 
-    public bool IsDirty =>
-        _hasStructuralChanges ||
-        Values.OfType<ITrackable<TValue>>().Any(x => x.GetChangeTracker().IsDirty);
+    public bool IsDirty(bool deepTracking = false)
+    {
+        return _hasStructuralChanges ||
+               Values.OfType<ITrackable<TValue>>().Any(x => x.GetChangeTracker().IsDirty(deepTracking));
+    }
 
     public new TValue this[TKey key]
     {

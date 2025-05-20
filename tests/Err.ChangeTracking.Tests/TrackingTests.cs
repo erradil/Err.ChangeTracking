@@ -18,7 +18,7 @@ public class OrderTrackingTests
 
         // Assert
         var tracker = order.GetChangeTracker();
-        Assert.True(tracker.IsDirty);
+        Assert.True(tracker.IsDirty());
         Assert.True(tracker.HasChanged(nameof(Order.Id)));
         Assert.Equal("ORD-001", tracker.GetOriginalValues()[nameof(Order.Id)]);
         Assert.Equal("ORD-002", order.Id);
@@ -41,7 +41,7 @@ public class OrderTrackingTests
 
         // Assert - Should not be tracked
         var tracker = order.GetChangeTracker();
-        Assert.False(tracker.IsDirty);
+        Assert.False(tracker.IsDirty());
         Assert.False(tracker.HasChanged(nameof(Order.CreatedDate)));
         // NotTracked properties won't be in the original values dictionary
         Assert.False(tracker.GetOriginalValues().ContainsKey(nameof(Order.CreatedDate)));
@@ -63,7 +63,7 @@ public class OrderTrackingTests
 
         // Assert - Should not be tracked
         var tracker = order.GetChangeTracker();
-        Assert.False(tracker.IsDirty);
+        Assert.False(tracker.IsDirty());
         // Non-partial properties won't be in the original values dictionary
         Assert.False(tracker.GetOriginalValues().ContainsKey(nameof(Order.Notes)));
         Assert.Equal("Modified notes", order.Notes);
@@ -84,8 +84,8 @@ public class OrderTrackingTests
         order.Tags.AsTrackable().Add("Urgent");
 
         // Assert - Collection should be dirty
-        Assert.True(order.Tags.AsTrackable().IsDirty);
-        Assert.False(order.GetChangeTracker().IsDirty); // Model doesn't track collection changes directly
+        Assert.True(order.Tags.AsTrackable().IsDirty());
+        Assert.False(order.GetChangeTracker().IsDirty()); // Model doesn't track collection changes directly
         Assert.Equal(3, order.Tags.Count);
         Assert.Contains("Urgent", order.Tags);
     }
@@ -107,7 +107,7 @@ public class OrderTrackingTests
 
         // Assert - Model should detect collection replacement
         var tracker = order.GetChangeTracker();
-        Assert.True(tracker.IsDirty);
+        Assert.True(tracker.IsDirty());
         Assert.True(tracker.HasChanged(nameof(Order.Tags)));
         var originalTags = tracker.GetOriginalValues()[nameof(Order.Tags)] as List<string>;
         Assert.NotNull(originalTags);
@@ -132,7 +132,7 @@ public class OrderTrackingTests
         order.Items.AsTrackable().Add(new OrderItem { Quantity = 2, UnitPrice = 20m });
 
         // Assert
-        Assert.True(order.Items.AsTrackable().IsDirty);
+        Assert.True(order.Items.AsTrackable().IsDirty());
         Assert.Equal(2, order.Items.Count);
     }
 
@@ -155,7 +155,7 @@ public class OrderTrackingTests
 
         // Assert
         var itemTracker = order.Items[0].GetChangeTracker();
-        Assert.True(itemTracker.IsDirty);
+        Assert.True(itemTracker.IsDirty());
         Assert.True(itemTracker.HasChanged(nameof(OrderItem.Quantity)));
         Assert.Equal(initialQuantity, itemTracker.GetOriginalValue(i => i.Quantity));
         Assert.Equal(5, order.Items[0].Quantity);
@@ -176,7 +176,7 @@ public class OrderTrackingTests
 
         // Assert
         var tracker = product.GetChangeTracker();
-        Assert.True(tracker.IsDirty);
+        Assert.True(tracker.IsDirty());
         Assert.True(tracker.HasChanged(nameof(Product.Description)));
         Assert.Equal(initialDescription, tracker.GetOriginalValues()[nameof(Product.Description)]);
         Assert.Equal("Updated Description", product.Description);
@@ -199,7 +199,7 @@ public class OrderTrackingTests
 
         // Assert
         var productTracker = orderItem.Product.GetChangeTracker();
-        Assert.True(productTracker.IsDirty);
+        Assert.True(productTracker.IsDirty());
         Assert.True(productTracker.HasChanged(nameof(Product.Description)));
         Assert.Equal(initialDescription, productTracker.GetOriginalValues()[nameof(Product.Description)]);
         Assert.Equal("Modified", orderItem.Product.Description);
@@ -219,7 +219,7 @@ public class OrderTrackingTests
         product.Categories.AsTrackable().Add("Category2");
 
         // Assert
-        Assert.True(product.Categories.AsTrackable().IsDirty);
+        Assert.True(product.Categories.AsTrackable().IsDirty());
         Assert.Equal(2, product.Categories.Count);
         Assert.Contains("Category2", product.Categories);
     }
@@ -239,7 +239,7 @@ public class OrderTrackingTests
 
         // Verify the property was changed
         var tracker = order.GetChangeTracker();
-        Assert.True(tracker.IsDirty);
+        Assert.True(tracker.IsDirty());
         Assert.True(tracker.HasChanged(nameof(Order.Id)));
         Assert.Equal(initialId, tracker.GetOriginalValues()[nameof(Order.Id)]);
 
@@ -248,7 +248,7 @@ public class OrderTrackingTests
 
         // Assert - Property should be restored to its original value
         Assert.Equal(initialId, order.Id);
-        Assert.False(tracker.IsDirty);
+        Assert.False(tracker.IsDirty());
         Assert.False(tracker.HasChanged(nameof(Order.Id)));
     }
 
@@ -269,7 +269,7 @@ public class OrderTrackingTests
 
         // Verify the property was changed
         var tracker = order.GetChangeTracker();
-        Assert.True(tracker.IsDirty);
+        Assert.True(tracker.IsDirty());
         Assert.True(tracker.HasChanged(nameof(Order.Id)));
         Assert.Equal(initialId, tracker.GetOriginalValues()[nameof(Order.Id)]);
 
@@ -278,7 +278,7 @@ public class OrderTrackingTests
 
         // Assert - Dirty flags should be cleared while values remain changed
         Assert.Equal(newId, order.Id);
-        Assert.False(tracker.IsDirty);
+        Assert.False(tracker.IsDirty());
         Assert.False(tracker.HasChanged(nameof(Order.Id)));
 
         // Make another change to verify the original value was updated
@@ -286,7 +286,7 @@ public class OrderTrackingTests
         order.Id = newerId;
 
         // After accepting changes, the original value should be the accepted value
-        Assert.True(tracker.IsDirty);
+        Assert.True(tracker.IsDirty());
         Assert.True(tracker.HasChanged(nameof(Order.Id)));
         Assert.Equal(newId, tracker.GetOriginalValues()[nameof(Order.Id)]);
     }
