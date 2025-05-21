@@ -8,4 +8,4 @@
  ERRTRACK002 | Err.ChangeTracking | Error    | Tracking attribute on non-partial property         
  ERRTRACK003 | Err.ChangeTracking | Error    | TrackCollection applied to non-collection property 
  ERRTRACK004 | Err.ChangeTracking | Error    | Conflicting tracking attributes                    
- ERRTRACK007 | Err.ChangeTracking | Error    | Missing setter on tracked property                 
+ ERRTRACK005 | Err.ChangeTracking | Error    | Missing setter on tracked property                 

@@ -195,7 +195,7 @@ internal static class SymbolHelper
     /// <summary>
     ///     Check if a property is partial
     /// </summary>
-    public static bool IsPartial(this IPropertySymbol propertySymbol)
+    public static bool IsPartial(IPropertySymbol propertySymbol)
     {
         foreach (var declaration in propertySymbol.DeclaringSyntaxReferences)
         {

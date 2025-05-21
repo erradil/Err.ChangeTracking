@@ -89,6 +89,8 @@ public class Analyzer : DiagnosticAnalyzer
         if (!hasTrackableOnType)
             return;
 
+        var isParial = SymbolHelper.IsPartial(propertySymbol);
+
         // Identify property tracking attributes
         var hasNotTracked = HasAttribute(propertySymbol, Constants.Types.NotTrackedAttributeFullName);
         var hasTrackOnly = HasAttribute(propertySymbol, Constants.Types.TrackOnlyAttributeFullName);
@@ -108,7 +110,7 @@ public class Analyzer : DiagnosticAnalyzer
         }
 
         // CRITICAL RULE 2: Check if property with tracking attributes is partial
-        if ((hasTrackOnly || hasTrackCollection) && !propertyDeclaration.Modifiers.Any(SyntaxKind.PartialKeyword))
+        if ((hasTrackOnly || hasTrackCollection) && !isParial)
             context.ReportDiagnostic(Diagnostic.Create(
                 Rules.PropertyNotPartial,
                 propertyDeclaration.Identifier.GetLocation(),
@@ -127,7 +129,7 @@ public class Analyzer : DiagnosticAnalyzer
 
         if (trackingMode == TrackingMode.All)
             // In All mode, only properties with [NotTracked] are excluded
-            willBeTracked = !hasNotTracked;
+            willBeTracked = isParial && !hasNotTracked;
         else if (trackingMode == TrackingMode.OnlyMarked)
             // In OnlyMarked mode, only properties with [TrackOnly] are included
             willBeTracked = hasTrackOnly;

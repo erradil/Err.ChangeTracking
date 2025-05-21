@@ -9,7 +9,7 @@ public static class Rules
     private const string PropertyNotPartialId = "ERRTRACK002";
     private const string TrackCollectionOnNonCollectionId = "ERRTRACK003";
     private const string ConflictingAttributesId = "ERRTRACK004";
-    private const string NoSetterOnTrackedPropertyId = "ERRTRACK007";
+    private const string NoSetterOnTrackedPropertyId = "ERRTRACK005";
 
     // CRITICAL RULE 1: Classes with [Trackable] must be partial
     public static readonly DiagnosticDescriptor TrackableNotPartial = new(

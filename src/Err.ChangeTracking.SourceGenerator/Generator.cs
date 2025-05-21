@@ -95,7 +95,7 @@ public class ChangeTrackingGenerator : IIncrementalGenerator
                 SymbolHelper.IsTypeOf(member, Constants.Types.TrackableListFullName);
 
             // Skip non-partial properties
-            if (!member.IsPartial() && !alreadyTrackableCollection)
+            if (!SymbolHelper.IsPartial(member) && !alreadyTrackableCollection)
                 continue;
 
             // Check property attributes

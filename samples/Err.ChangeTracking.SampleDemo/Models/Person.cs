@@ -13,5 +13,6 @@ internal partial record Person
     public partial struct Address
     {
         public partial string Street { get; set; }
+        public string City => "Paris";
     }
 }
