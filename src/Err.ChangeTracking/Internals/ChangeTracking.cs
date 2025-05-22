@@ -6,9 +6,7 @@ namespace Err.ChangeTracking.Internals;
 
 internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEntity>
 {
-    private static readonly IReadOnlyDictionary<string, object?> _emptyChanges = new Dictionary<string, object?>();
-
-    private Dictionary<string, object?>? _originalValues;
+    private readonly Dictionary<string, object?> _originalValues = [];
     public bool IsEnabled { get; private set; }
 
     public IChangeTracking<TEntity> Enable(bool enable = true)
@@ -25,7 +23,7 @@ internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEnti
 
     public IReadOnlyDictionary<string, object?> GetOriginalValues()
     {
-        return _originalValues ?? _emptyChanges;
+        return _originalValues;
     }
 
     public TProperty? GetOriginalValue<TProperty>(Expression<Func<TEntity, TProperty>> propertyExpression)
@@ -36,19 +34,19 @@ internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEnti
 
     public TProperty? GetOriginalValue<TProperty>(string propertyName)
     {
-        if (_originalValues?.TryGetValue(propertyName, out var value) is true) return (TProperty?)value;
+        if (_originalValues.TryGetValue(propertyName, out var value) is true) return (TProperty?)value;
 
         return default;
     }
 
     public IReadOnlyCollection<string> GetChangedProperties()
     {
-        return _originalValues?.Keys ?? (IReadOnlyCollection<string>)_emptyChanges.Keys;
+        return _originalValues.Keys;
     }
 
     public bool HasChanged(string propertyName)
     {
-        return _originalValues?.ContainsKey(propertyName) ?? false;
+        return _originalValues.ContainsKey(propertyName);
     }
 
     public bool HasChanged<TProperty>(Expression<Func<TEntity, TProperty>> propertyExpression)
@@ -60,10 +58,8 @@ internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEnti
 
     public void RecordChange<TProperty>(string propertyName, TProperty? currentValue, TProperty? newValue)
     {
-        if (!IsEnabled && EqualityComparer<TProperty?>.Default.Equals(currentValue, newValue))
+        if (!IsEnabled || EqualityComparer<TProperty?>.Default.Equals(currentValue, newValue))
             return;
-
-        _originalValues ??= [];
 
         if (_originalValues.TryGetValue(propertyName, out var originalValue))
         {
@@ -78,7 +74,7 @@ internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEnti
 
     public void Rollback()
     {
-        if (!IsEnabled || instance == null || _originalValues == null)
+        if (!IsEnabled || instance == null || _originalValues is { Count: 0 })
             return;
 
         IsEnabled = false; // Disable tracking temporarily to avoid recording changes when restoring original value
@@ -92,7 +88,7 @@ internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEnti
 
     public void Rollback(string propertyName)
     {
-        if (!IsEnabled || instance == null || _originalValues == null)
+        if (!IsEnabled || instance == null || _originalValues is { Count: 0 })
             return;
 
         if (!_originalValues.TryGetValue(propertyName, out var originalValue))
@@ -113,12 +109,12 @@ internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEnti
 
     public void AcceptChanges()
     {
-        _originalValues?.Clear();
+        _originalValues.Clear();
     }
 
     public void AcceptChanges(string propertyName)
     {
-        _originalValues?.Remove(propertyName);
+        _originalValues.Remove(propertyName);
     }
 
     public void AcceptChanges<TProperty>(Expression<Func<TEntity, TProperty>> propertyExpression)

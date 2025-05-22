@@ -1,50 +1,14 @@
-using Err.ChangeTracking.Internals;
-
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
 namespace Err.ChangeTracking.SampleDemo.Models;
 
-public partial class Model
-{
-    public partial string Name { get; set; }
-
-    public partial SubModel SubModel { get; set; }
-    public partial List<SubModel>? Items { get; set; }
-    private TrackableList<SubModel>? _items;
-
-    public partial List<SubModel>? Items
-    {
-        get => _items;
-        set
-        {
-            _changeTracker?.RecordChange(nameof(Items), _items, value);
-            _items = value is null ? null : new TrackableList<SubModel>(value);
-        }
-    }
-}
-
-[Trackable]
-public partial class SubModel
-{
-    public partial string Name { get; set; }
-}
-
-public partial class SubModel
-{
-    static SubModel()
-    {
-        DeepChangeTracking<SubModel>.SetDeepTrackableProperties([]);
-    }
-}
-
-//example of generated code
-public partial class Model : ITrackable<Model>
+public class Model : ITrackable<Model>
 {
     static Model()
     {
         // we identify all trackable properties for deep tracking
         DeepChangeTracking<Model>.SetDeepTrackableProperties([
             x => x.SubModel?.GetChangeTracker(), // if property is Trackable<T>
-            x => x.Items as ITrackableCollection // if property Is ITrackableCollection
+            x => x.Items as IBaseTracking // if property Is ITrackableCollection
         ]);
     }
 
@@ -52,14 +16,12 @@ public partial class Model : ITrackable<Model>
 
     public IChangeTracking<Model> GetChangeTracker()
     {
-        if (_changeTracker is null) _changeTracker = ChangeTracking.Create(this);
-
-        return _changeTracker;
+        return _changeTracker ??= ChangeTracking.Create(this);
     }
 
     private string _name;
 
-    public partial string Name
+    public string Name
     {
         get => _name;
         set
@@ -69,9 +31,22 @@ public partial class Model : ITrackable<Model>
         }
     }
 
+    private TrackableList<SubModel>? _items;
+
+    public List<SubModel>? Items
+    {
+        get => _items;
+        set
+        {
+            _changeTracker?.RecordChange(nameof(Items), _items, value);
+            _items = value is null ? null : new TrackableList<SubModel>(value);
+        }
+    }
+
+
     private SubModel _subModel;
 
-    public partial SubModel SubModel
+    public SubModel SubModel
     {
         get => _subModel;
         set
@@ -80,4 +55,10 @@ public partial class Model : ITrackable<Model>
             _subModel = value;
         }
     }
+}
+
+[Trackable]
+public partial class SubModel
+{
+    public partial string Name { get; set; }
 }
