@@ -9,6 +9,11 @@ internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEnti
     private readonly Dictionary<string, object?> _originalValues = [];
     public bool IsEnabled { get; private set; }
 
+    public static IChangeTracking<TEntity> Create(TEntity entity)
+    {
+        return new ChangeTracking<TEntity>(entity);
+    }
+
     public IChangeTracking<TEntity> Enable(bool enable = true)
     {
         IsEnabled = enable;
@@ -58,12 +63,15 @@ internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEnti
 
     public void RecordChange<TProperty>(string propertyName, TProperty? currentValue, TProperty? newValue)
     {
-        if (!IsEnabled || EqualityComparer<TProperty?>.Default.Equals(currentValue, newValue))
+        if (!IsEnabled || EqualityComparer<TProperty?>.Default.Equals(newValue, currentValue))
             return;
+
 
         if (_originalValues.TryGetValue(propertyName, out var originalValue))
         {
-            if (EqualityComparer<TProperty?>.Default.Equals(currentValue, (TProperty?)originalValue))
+            // Rollback change tracking when the property returns to its original value,
+            // effectively canceling out the modification as if it never happened.
+            if (EqualityComparer<TProperty?>.Default.Equals(newValue, (TProperty?)originalValue))
                 Rollback(propertyName);
         }
         else

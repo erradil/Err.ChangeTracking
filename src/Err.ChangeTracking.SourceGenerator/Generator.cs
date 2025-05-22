@@ -148,12 +148,6 @@ public class ChangeTrackingGenerator : IIncrementalGenerator
         indent++;
         var contentIndent = GetIndentation(indent);
 
-        // Generate ITrackable implementation if needed
-        if (typeInfo.AlreadyImplementsTrackable is false)
-        {
-            sourceBuilder.AppendLine(typeDisplay.ToDisplayTrackingImplementation(contentIndent));
-        }
-
         // Generate static constructor for deep tracking if needed
         var staticCtor = typeDisplay.ToDisplayStaticConstructor(contentIndent);
         if (!string.IsNullOrEmpty(staticCtor)) sourceBuilder.AppendLine(staticCtor);

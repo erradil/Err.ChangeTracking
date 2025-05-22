@@ -9,7 +9,7 @@ internal static class PropertyHelper<TEntity>
     /// <summary>
     ///     Lazily initialized dictionary of compiled property setters for performance.
     /// </summary>
-    internal static readonly Lazy<Dictionary<string, Action<TEntity, object?>>> PropertiesSettersImpl =
+    private static readonly Lazy<Dictionary<string, Action<TEntity, object?>>> PropertiesSettersImpl =
         new(BuildPropertySetters);
 
     /// <summary>

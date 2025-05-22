@@ -1,17 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using Err.ChangeTracking.Internals;
 
 namespace Err.ChangeTracking;
-
-public static class ChangeTracking
-{
-    public static IChangeTracking<TEntity> Create<TEntity>(TEntity entity)
-    {
-        return new ChangeTracking<TEntity>(entity);
-    }
-}
 
 public interface IBaseTracking
 {
@@ -21,7 +12,6 @@ public interface IBaseTracking
 public interface IChangeTracking<TEntity> : IBaseTracking
 {
     bool IsEnabled { get; }
-    //bool IsDirty { get; }
 
     public IChangeTracking<TEntity> Enable(bool enable = true);
 
