@@ -55,7 +55,7 @@ public class Analyzer : DiagnosticAnalyzer
         if (symbol == null) return;
 
         // Only analyze types with [Trackable] attribute
-        var hasTrackableAttribute = HasAttribute(symbol, Constants.Types.TrackableAttributeFullName);
+        var hasTrackableAttribute = PropertyHelper.HasTrackableAttribute(symbol);
         if (!hasTrackableAttribute)
             return;
 
@@ -78,120 +78,88 @@ public class Analyzer : DiagnosticAnalyzer
         var semanticModel = context.SemanticModel;
 
         // Get property symbol and containing type
-        if (semanticModel.GetDeclaredSymbol(propertyDeclaration) is not { } propertySymbol)
+        if (semanticModel.GetDeclaredSymbol(propertyDeclaration) is not IPropertySymbol propertySymbol)
             return;
 
         var containingType = propertySymbol.ContainingType;
         if (containingType == null) return;
 
         // Check if the containing type has [Trackable] attribute
-        var hasTrackableOnType = HasAttribute(containingType, Constants.Types.TrackableAttributeFullName);
-        if (!hasTrackableOnType)
+        if (!PropertyHelper.HasTrackableAttribute(containingType))
             return;
 
-        var isParial = SymbolHelper.IsPartial(propertySymbol);
+        // Create PropertyHelper for the property
+        var propertyHelper = new PropertyHelper(propertySymbol);
 
-        // Identify property tracking attributes
-        var hasNotTracked = HasAttribute(propertySymbol, Constants.Types.NotTrackedAttributeFullName);
-        var hasTrackOnly = HasAttribute(propertySymbol, Constants.Types.TrackOnlyAttributeFullName);
-        var hasTrackCollection = HasAttribute(propertySymbol, Constants.Types.TrackCollectionAttributeFullName);
 
-        // Skip further checks if property is explicitly not tracked
-        if (hasNotTracked)
+        // CRITICAL RULE 4: Check for conflicting attributes
+        if (propertyHelper.HasNotTrackedAttribute &&
+            (propertyHelper.HasTrackOnlyAttribute || propertyHelper.HasTrackCollectionAttribute))
         {
-            // CRITICAL RULE 4: Check for conflicting attributes
-            if (hasTrackOnly || hasTrackCollection)
-                context.ReportDiagnostic(Diagnostic.Create(
-                    Rules.ConflictingAttributes,
-                    propertyDeclaration.Identifier.GetLocation(),
-                    propertySymbol.Name));
+            context.ReportDiagnostic(Diagnostic.Create(
+                Rules.ConflictingAttributes,
+                propertyDeclaration.Identifier.GetLocation(),
+                propertyHelper.Name));
 
-            return;
+            return; // Skip further checks if property has conflicting attributes
         }
 
         // CRITICAL RULE 2: Check if property with tracking attributes is partial
-        if ((hasTrackOnly || hasTrackCollection) && !isParial)
+        if ((propertyHelper.HasTrackOnlyAttribute || propertyHelper.HasTrackCollectionAttribute) &&
+            !propertyHelper.IsPartial())
+        {
             context.ReportDiagnostic(Diagnostic.Create(
                 Rules.PropertyNotPartial,
                 propertyDeclaration.Identifier.GetLocation(),
-                propertySymbol.Name));
+                propertyHelper.Name));
+        }
 
         // CRITICAL RULE 3: Check if TrackCollection is applied to a non-collection type
-        if (hasTrackCollection && !IsCollectionType(propertySymbol.Type))
-            context.ReportDiagnostic(Diagnostic.Create(
-                Rules.TrackCollectionOnNonCollection,
-                propertyDeclaration.Identifier.GetLocation(),
-                propertySymbol.Name));
+        if (propertyHelper.HasTrackCollectionAttribute)
+        {
+            var (isCollection, _) = IsCollectionType(propertySymbol.Type);
+            if (!isCollection)
+                context.ReportDiagnostic(Diagnostic.Create(
+                    Rules.TrackCollectionOnNonCollection,
+                    propertyDeclaration.Identifier.GetLocation(),
+                    propertyHelper.Name));
+        }
 
         // Determine if this property will be tracked based on tracking mode
         var willBeTracked = false;
-        var trackingMode = GetTrackingMode(containingType);
+        var trackingMode = PropertyHelper.GetTrackingMode(containingType);
 
         if (trackingMode == TrackingMode.All)
             // In All mode, only properties with [NotTracked] are excluded
-            willBeTracked = isParial && !hasNotTracked;
+            willBeTracked = propertyHelper.IsPartial() && !propertyHelper.HasNotTrackedAttribute;
         else if (trackingMode == TrackingMode.OnlyMarked)
             // In OnlyMarked mode, only properties with [TrackOnly] are included
-            willBeTracked = hasTrackOnly;
+            willBeTracked = propertyHelper.HasTrackOnlyAttribute;
 
-        // If property will be tracked, check for required setter
-        if (willBeTracked)
-            // CRITICAL RULE 5: Check if property has a setter
-            if (propertySymbol.SetMethod == null)
-                context.ReportDiagnostic(Diagnostic.Create(
-                    Rules.NoSetterOnTrackedProperty,
-                    propertyDeclaration.Identifier.GetLocation(),
-                    propertySymbol.Name));
-    }
-
-    /// <summary>
-    ///     Check if a symbol has a specific attribute
-    /// </summary>
-    private static bool HasAttribute(ISymbol symbol, string attributeName)
-    {
-        return symbol.GetAttributes()
-            .Any(a => a.AttributeClass?.ToDisplayString() == attributeName);
-    }
-
-    /// <summary>
-    ///     Get tracking mode from [Trackable] attribute
-    /// </summary>
-    private static TrackingMode GetTrackingMode(INamedTypeSymbol typeSymbol)
-    {
-        foreach (var attribute in typeSymbol.GetAttributes())
-        {
-            if (attribute.AttributeClass?.ToDisplayString() == Constants.Types.TrackableAttributeFullName)
-            {
-                // Check constructor arguments
-                if (attribute.ConstructorArguments.Length > 0)
-                {
-                    var value = attribute.ConstructorArguments[0].Value;
-                    if (value is int trackingModeValue)
-                        return (TrackingMode)trackingModeValue;
-                }
-
-                // Check named arguments
-                if (attribute.NamedArguments.FirstOrDefault(kvp => kvp.Key == "Mode").Value.Value is int namedValue)
-                    return (TrackingMode)namedValue;
-
-                break;
-            }
-        }
-
-        return TrackingMode.All; // Default if not specified
+        // CRITICAL RULE 5: Check if property has a setter when it's going to be tracked
+        if (willBeTracked && !propertyHelper.HasSetter)
+            context.ReportDiagnostic(Diagnostic.Create(
+                Rules.NoSetterOnTrackedProperty,
+                propertyDeclaration.Identifier.GetLocation(),
+                propertyHelper.Name));
     }
 
     /// <summary>
     ///     Check if a type is a collection that can be tracked
     /// </summary>
-    private static bool IsCollectionType(ITypeSymbol type)
+    private static (bool isCollection, bool isTrackable) IsCollectionType(ITypeSymbol type)
     {
         // Handle null types
         if (type == null)
-            return false;
+            return (false, false);
 
         // Check if it's a known collection type
         var typeName = type.OriginalDefinition.ToDisplayString();
+
+        // Check if it's already a trackable collection
+        if (typeName.StartsWith(Constants.Types.TrackableListFullName) ||
+            typeName.StartsWith(Constants.Types.TrackableDictionaryFullName))
+            return (true, true);
 
         // Check for exact matches with common collection types
         if (typeName == "System.Collections.Generic.List<T>" ||
@@ -203,21 +171,20 @@ public class Analyzer : DiagnosticAnalyzer
             typeName == "System.Collections.ObjectModel.Collection<T>" ||
             typeName == "System.Collections.ObjectModel.ObservableCollection<T>" ||
             typeName == "System.Collections.Concurrent.ConcurrentBag<T>" ||
-            typeName == "System.Collections.Concurrent.ConcurrentDictionary<TKey, TValue>" ||
-            typeName == Constants.Types.TrackableListFullName ||
-            typeName == Constants.Types.TrackableDictionaryFullName)
-            return true;
+            typeName == "System.Collections.Concurrent.ConcurrentDictionary<TKey, TValue>")
+            return (true, false);
 
         // Check if it implements collection interfaces
         if (type is INamedTypeSymbol namedType && namedType.AllInterfaces.Any(i =>
                 i.OriginalDefinition.ToDisplayString() == "System.Collections.Generic.ICollection<T>" ||
                 i.OriginalDefinition.ToDisplayString() == "System.Collections.Generic.IList<T>" ||
                 i.OriginalDefinition.ToDisplayString() == "System.Collections.Generic.IDictionary<TKey, TValue>"))
-            return true;
+            return (true, false);
 
         // Also check for array types
-        if (type is IArrayTypeSymbol) return true;
+        if (type is IArrayTypeSymbol)
+            return (true, false);
 
-        return false;
+        return (false, false);
     }
 }

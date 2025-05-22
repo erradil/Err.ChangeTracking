@@ -23,6 +23,9 @@ internal record struct ContainingTypeInfo
     }
 }
 
+/// <summary>
+///     Information about a type for code generation
+/// </summary>
 internal record struct TypeInfo
 {
     /// <summary>
@@ -64,53 +67,115 @@ internal record struct TypeInfo
     ///     Trackable properties
     /// </summary>
     public ImmutableArray<PropertyInfo> Properties { get; set; }
-
-    /// <summary>
-    /// Returns the fully qualified name of the type including namespace and any containing types
-    /// </summary>
-    public string GetFullName()
-    {
-        var parts = new List<string>();
-
-        // Add namespace if not global
-        if (!string.IsNullOrEmpty(Namespace))
-            parts.Add(Namespace!);
-
-        // Add containing types
-        foreach (var containingType in ContainingTypeInfos)
-            parts.Add(containingType.Name);
-
-        // Add the type name
-        parts.Add(Name);
-
-        return string.Join(".", parts);
-    }
 }
 
 /// <summary>
-/// Extension to PropertyInfo to include tracking-related attributes
+///     Contains all information about a property needed for change tracking generation
 /// </summary>
 internal record struct PropertyInfo
 {
+    /// <summary>
+    ///     Name of the property
+    /// </summary>
     public string Name { get; set; }
+
+    /// <summary>
+    ///     Type name of the property
+    /// </summary>
     public string TypeName { get; set; }
+
+    /// <summary>
+    ///     Name of the backing field
+    /// </summary>
     public string BackingFieldName { get; set; }
+
+    /// <summary>
+    ///     Whether the property is static
+    /// </summary>
     public bool IsStatic { get; set; }
+
+    /// <summary>
+    ///     Whether the property is virtual
+    /// </summary>
     public bool IsVirtual { get; set; }
+
+    /// <summary>
+    ///     Whether the property is an override
+    /// </summary>
     public bool IsOverride { get; set; }
+
+    /// <summary>
+    ///     Whether the property is abstract
+    /// </summary>
     public bool IsAbstract { get; set; }
+
+    /// <summary>
+    ///     Whether the property is sealed
+    /// </summary>
     public bool IsSealed { get; set; }
+
+    /// <summary>
+    ///     Accessibility of the property
+    /// </summary>
     public Accessibility PropertyAccessibility { get; set; }
+
+    /// <summary>
+    ///     Whether the property has a getter
+    /// </summary>
     public bool HasGetter { get; set; }
+
+    /// <summary>
+    ///     Whether the property has a setter
+    /// </summary>
     public bool HasSetter { get; set; }
+
+    /// <summary>
+    ///     Whether the setter is init-only
+    /// </summary>
     public bool IsSetterInitOnly { get; set; }
+
+    /// <summary>
+    ///     Accessibility of the getter
+    /// </summary>
     public Accessibility GetterAccessibility { get; set; }
+
+    /// <summary>
+    ///     Accessibility of the setter
+    /// </summary>
     public Accessibility SetterAccessibility { get; set; }
+
+    /// <summary>
+    ///     Whether the property is a trackable collection
+    /// </summary>
     public bool IsTrackableCollection { get; set; }
+
+    /// <summary>
+    ///     The collection wrapper type for collections
+    /// </summary>
     public string? CollectionWrapperType { get; set; }
+
+    /// <summary>
+    ///     Whether the property type is nullable
+    /// </summary>
     public bool IsNullable { get; set; }
-    public bool IsTrackOnly { get; set; }
-    public bool HasTrackCollectionAttributeAttribute { get; set; }
-    public bool AlreadyTrackableCollection { get; set; }
-    public bool IsTrackableEntity { get; set; }
+
+    /// <summary>
+    ///     Whether the property has the TrackOnly attribute
+    /// </summary>
+    public bool HasTrackOnlyAttribute { get; set; }
+
+    /// <summary>
+    ///     Whether the property has the TrackCollection attribute
+    /// </summary>
+    public bool HasTrackCollectionAttribute { get; set; }
+
+    /// <summary>
+    ///     Whether the property type is already a trackable collection
+    /// </summary>
+    public bool IsAlreadyTrackableCollection { get; set; }
+
+    /// <summary>
+    ///     Whether the property type implements ITrackable
+    /// </summary>
+    public bool IsTypeImplementsTrackable { get; set; }
 }
