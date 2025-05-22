@@ -87,19 +87,29 @@ using Err.ChangeTracking;
 
 public partial class Person : ITrackable<Person>
 {
-    private IChangeTracking<Person> _changeTracker;
-    public IChangeTracking<Person> GetChangeTracker() => _changeTracker ??= ChangeTracking.Create(this);
-
     private string _firstName;
     public partial string FirstName
     {
         get => _firstName;
-        set { _changeTracker?.RecordChange(nameof(FirstName), _firstName, value); _firstName = value; }
+        set { this.GetChangeTracker().RecordChange(nameof(FirstName), _firstName, value); _firstName = value; }
     }
     // ...
 }
 ```
 
+For complex entities with nested objects, you can also manually configure deep tracking in a static constructor. This
+enables tracking changes through entire object graphs:
+
+```csharp
+static Order()
+{
+    // Get all properties that are either deep trackable entities or collections
+    DeepTracking<Model>.SetTrackableProperties([
+        x => x.Shipping?.GetChangeTracker(), // if property is Trackable<T>
+        x => x.Items as IBaseTracker // if property Is ITrackableCollection
+    ]);
+}
+```
 This manual approach gives you precise control over when and how changes are recorded, perfect for complex scenarios
 where you need custom validation, notification, or conditional tracking logic.
 

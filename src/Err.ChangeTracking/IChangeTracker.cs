@@ -1,29 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using Err.ChangeTracking.Internals;
 
 namespace Err.ChangeTracking;
 
-public static class ChangeTracking
-{
-    public static IChangeTracking<TEntity> Create<TEntity>(TEntity entity)
-    {
-        return new ChangeTracking<TEntity>(entity);
-    }
-}
-
-public interface IBaseTracking
+public interface IBaseTracker
 {
     bool IsDirty(bool deepTracking = false);
 }
 
-public interface IChangeTracking<TEntity> : IBaseTracking
+public interface IChangeTracker<TEntity> : IBaseTracker
 {
     bool IsEnabled { get; }
-    //bool IsDirty { get; }
 
-    public IChangeTracking<TEntity> Enable(bool enable = true);
+    public IChangeTracker<TEntity> Enable(bool enable = true);
 
     IReadOnlyCollection<string> GetChangedProperties();
     bool HasChanged(string propertyName);

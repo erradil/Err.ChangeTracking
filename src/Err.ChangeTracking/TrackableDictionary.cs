@@ -4,8 +4,9 @@ using System.Linq;
 
 namespace Err.ChangeTracking;
 
-public class TrackableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, ITrackableCollection,
+public class TrackableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IBaseTracker,
     IEnumerable<KeyValuePair<TKey, TValue>>
+    where TValue : class
 {
     private bool _hasStructuralChanges;
 

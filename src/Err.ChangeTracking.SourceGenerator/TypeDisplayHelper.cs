@@ -58,22 +58,6 @@ internal class TypeDisplayHelper
     }
 
     /// <summary>
-    ///     Returns the tracking implementation code for ITrackable interface
-    /// </summary>
-    public string ToDisplayTrackingImplementation(string indent = "")
-    {
-        var typeName = GetFullName();
-        var changeTrackingType = Constants.Types.IChangeTrackingFullName.Replace("<T>", $"<{typeName}>");
-
-        return $$"""
-                 {{indent}}// ITrackable interface implementation
-                 {{indent}}private {{changeTrackingType}}? _changeTracker;
-                 {{indent}}public {{changeTrackingType}} GetChangeTracker() => _changeTracker ??= ChangeTracking.Create(this);
-                 {{indent}}
-                 """;
-    }
-
-    /// <summary>
     ///     Returns the static constructor for deep change tracking
     /// </summary>
     public string ToDisplayStaticConstructor(string indent = "")
@@ -93,7 +77,7 @@ internal class TypeDisplayHelper
         sb.AppendLine($"{indent}{{");
         sb.AppendLine($"{indent}    // Get all properties that are either deep trackable entities or collections");
         sb.AppendLine(
-            $"{indent}    {Constants.Types.DeepChangeTrackingFullName.Replace("<T>", $"<{_typeInfo.Name}>")}.SetDeepTrackableProperties([");
+            $"{indent}    {Constants.Types.DeepTrackingFullName.Replace("<T>", $"<{_typeInfo.Name}>")}.SetTrackableProperties([");
 
         // Generate delegates for each trackable property
         foreach (var property in trackableProperties)
@@ -119,10 +103,6 @@ internal class TypeDisplayHelper
         sb.AppendLine($"{indent}// Auto-generated implementation for {_typeInfo.Name}");
         sb.AppendLine($"{indent}{ToDisplayDeclaration()}");
         sb.AppendLine($"{indent}{{");
-
-        // If we need to add the interface implementation
-        if (_typeInfo.AlreadyImplementsTrackable is false)
-            sb.AppendLine(ToDisplayTrackingImplementation(indent + "    "));
 
         // Add static constructor for deep tracking
         var staticCtor = ToDisplayStaticConstructor(indent + "    ");

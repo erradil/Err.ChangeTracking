@@ -40,7 +40,7 @@ public class GeneratorTests
     public void GeneratePersonRecord()
     {
         // Create an instance of the source generator
-        var generator = new ChangeTrackingGenerator();
+        var generator = new ChangeTrackerGenerator();
 
         // Use GeneratorDriver for testing
         var driver = CSharpGeneratorDriver.Create(generator);

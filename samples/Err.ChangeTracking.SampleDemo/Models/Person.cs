@@ -10,7 +10,7 @@ internal partial record Person
     [TrackCollection] public partial List<string>? Options2 { get; set; }
 
     [Trackable]
-    public partial struct Address
+    public partial record Address
     {
         public partial string Street { get; set; }
         public string City => "Paris";

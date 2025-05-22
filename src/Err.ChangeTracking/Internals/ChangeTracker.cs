@@ -4,12 +4,17 @@ using System.Linq.Expressions;
 
 namespace Err.ChangeTracking.Internals;
 
-internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEntity>
+internal class ChangeTracker<TEntity>(TEntity instance) : IChangeTracker<TEntity>
 {
     private readonly Dictionary<string, object?> _originalValues = [];
     public bool IsEnabled { get; private set; }
 
-    public IChangeTracking<TEntity> Enable(bool enable = true)
+    public static IChangeTracker<TEntity> Create(TEntity entity)
+    {
+        return new ChangeTracker<TEntity>(entity);
+    }
+
+    public IChangeTracker<TEntity> Enable(bool enable = true)
     {
         IsEnabled = enable;
         return this;
@@ -18,7 +23,7 @@ internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEnti
     public bool IsDirty(bool deepTracking = false)
     {
         return _originalValues is { Count: > 0 }
-               || (deepTracking && DeepChangeTracking<TEntity>.HasDeepChanges(instance));
+               || (deepTracking && DeepTracking<TEntity>.HasDeepChanges(instance));
     }
 
     public IReadOnlyDictionary<string, object?> GetOriginalValues()
@@ -58,12 +63,15 @@ internal class ChangeTracking<TEntity>(TEntity instance) : IChangeTracking<TEnti
 
     public void RecordChange<TProperty>(string propertyName, TProperty? currentValue, TProperty? newValue)
     {
-        if (!IsEnabled || EqualityComparer<TProperty?>.Default.Equals(currentValue, newValue))
+        if (!IsEnabled || EqualityComparer<TProperty?>.Default.Equals(newValue, currentValue))
             return;
+
 
         if (_originalValues.TryGetValue(propertyName, out var originalValue))
         {
-            if (EqualityComparer<TProperty?>.Default.Equals(currentValue, (TProperty?)originalValue))
+            // Rollback change tracking when the property returns to its original value,
+            // effectively canceling out the modification as if it never happened.
+            if (EqualityComparer<TProperty?>.Default.Equals(newValue, (TProperty?)originalValue))
                 Rollback(propertyName);
         }
         else
