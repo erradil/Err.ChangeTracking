@@ -4,7 +4,8 @@ using System.Linq;
 
 namespace Err.ChangeTracking;
 
-public class TrackableList<T> : List<T>, ITrackableCollection, IEnumerable<T>
+public class TrackableList<T> : List<T>, IEnumerable<T>, IBaseTracker
+    where T : class
 
 {
     private bool _hasStructuralChanges;

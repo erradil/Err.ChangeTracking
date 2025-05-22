@@ -12,8 +12,7 @@ public static class Constants
         public const string TrackCollectionAttributeFullName = $"{Namespace}.TrackCollectionAttribute";
 
         public const string ITrackableFullName = $"{Namespace}.ITrackable<T>";
-        public const string IChangeTrackingFullName = $"{Namespace}.IChangeTracking<T>";
-        public const string DeepChangeTrackingFullName = $"{Namespace}.DeepChangeTracking<T>";
+        public const string DeepTrackingFullName = $"{Namespace}.DeepTracking<T>";
 
         public const string TrackableListFullName = $"{Namespace}.TrackableList<T>";
         public const string TrackableDictionaryFullName = $"{Namespace}.TrackableDictionary<TKey, TValue>";

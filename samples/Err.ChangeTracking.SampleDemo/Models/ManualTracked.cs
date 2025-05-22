@@ -6,17 +6,10 @@ public class Model : ITrackable<Model>
     static Model()
     {
         // we identify all trackable properties for deep tracking
-        DeepChangeTracking<Model>.SetDeepTrackableProperties([
+        DeepTracking<Model>.SetTrackableProperties([
             x => x.SubModel?.GetChangeTracker(), // if property is Trackable<T>
-            x => x.Items as IBaseTracking // if property Is ITrackableCollection
+            x => x.Items as IBaseTracker // if property Is ITrackableCollection
         ]);
-    }
-
-    private IChangeTracking<Model>? _changeTracker;
-
-    public IChangeTracking<Model> GetChangeTracker()
-    {
-        return _changeTracker ??= ChangeTracking.Create(this);
     }
 
     private string _name;
@@ -26,7 +19,7 @@ public class Model : ITrackable<Model>
         get => _name;
         set
         {
-            _changeTracker?.RecordChange(nameof(Name), _name, value);
+            this.GetChangeTracker().RecordChange(nameof(Name), _name, value);
             _name = value;
         }
     }
@@ -38,7 +31,7 @@ public class Model : ITrackable<Model>
         get => _items;
         set
         {
-            _changeTracker?.RecordChange(nameof(Items), _items, value);
+            this.GetChangeTracker().RecordChange(nameof(Items), _items, value);
             _items = value is null ? null : new TrackableList<SubModel>(value);
         }
     }
@@ -51,7 +44,7 @@ public class Model : ITrackable<Model>
         get => _subModel;
         set
         {
-            _changeTracker?.RecordChange(nameof(SubModel), _subModel, value);
+            this.GetChangeTracker().RecordChange(nameof(SubModel), _subModel, value);
             _subModel = value;
         }
     }

@@ -47,7 +47,7 @@ public enum TrackingMode
 ///     }
 ///     </code>
 /// </example>
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
+[AttributeUsage(AttributeTargets.Class)]
 public class TrackableAttribute : Attribute
 {
     /// <summary>

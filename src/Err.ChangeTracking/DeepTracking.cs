@@ -3,12 +3,12 @@ using System.Collections.Generic;
 
 namespace Err.ChangeTracking;
 
-public static class DeepChangeTracking<T>
+public static class DeepTracking<T>
 {
     private static readonly object _objLock = new();
-    private static List<Func<T, IBaseTracking?>>? _deepTrackableProperties;
+    private static List<Func<T, IBaseTracker?>>? _deepTrackableProperties;
 
-    public static void SetDeepTrackableProperties(List<Func<T, IBaseTracking?>> value)
+    public static void SetTrackableProperties(List<Func<T, IBaseTracker?>> value)
     {
         lock (_objLock)
             _deepTrackableProperties ??= value;

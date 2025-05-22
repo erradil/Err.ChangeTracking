@@ -10,7 +10,7 @@ namespace Err.ChangeTracking.SourceGenerator;
 ///     Source generator that implements partial properties with change tracking
 /// </summary>
 [Generator]
-public class ChangeTrackingGenerator : IIncrementalGenerator
+public class ChangeTrackerGenerator : IIncrementalGenerator
 {
     #region Initialization
 
@@ -147,12 +147,6 @@ public class ChangeTrackingGenerator : IIncrementalGenerator
 
         indent++;
         var contentIndent = GetIndentation(indent);
-
-        // Generate ITrackable implementation if needed
-        if (typeInfo.AlreadyImplementsTrackable is false)
-        {
-            sourceBuilder.AppendLine(typeDisplay.ToDisplayTrackingImplementation(contentIndent));
-        }
 
         // Generate static constructor for deep tracking if needed
         var staticCtor = typeDisplay.ToDisplayStaticConstructor(contentIndent);
