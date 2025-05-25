@@ -149,6 +149,10 @@ internal class TypeHelper
             if (!propertyHelper.IsPartial() && !propertyHelper.IsAlreadyTrackableCollection)
                 continue;
 
+            // skip for init-only setter
+            if (propertyHelper.IsSetterInitOnly)
+                continue;
+
             // If explicitly marked not to track, then don't track
             if (propertyHelper.HasNotTrackedAttribute)
                 continue;

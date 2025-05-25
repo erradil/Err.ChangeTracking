@@ -1,28 +1,20 @@
-﻿using System.Runtime.CompilerServices;
-using Err.ChangeTracking.Internals;
+﻿namespace Err.ChangeTracking;
 
-namespace Err.ChangeTracking;
-
-public interface ITrackable<T> where T : class
+public interface ITrackable<TEntity> where TEntity : class
 {
     /// <summary>
     ///     Gets the change tracker for this entity
     /// </summary>
-    IChangeTracker<T> GetChangeTracker()
+    IChangeTracker<TEntity> GetChangeTracker()
     {
-        return TrackingCache<T>.GetOrCreate((T)this);
+        return ChangeTrackerFactory.GetOrCreate((TEntity)this, true);
     }
 }
 
-/// <summary>
-///     Cache to maintain one tracker per instance
-/// </summary>
-internal static class TrackingCache<T> where T : class
+public interface ITrackableBase<TEntity> where TEntity : class
 {
-    private static readonly ConditionalWeakTable<T, IChangeTracker<T>> Cache = new();
-
-    public static IChangeTracker<T> GetOrCreate(T instance)
-    {
-        return Cache.GetValue(instance, ChangeTracker<T>.Create);
-    }
+    /// <summary>
+    ///     Gets the change tracker for this entity
+    /// </summary>
+    IChangeTracker<TEntity> GetChangeTracker();
 }
