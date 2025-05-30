@@ -153,3 +153,32 @@ public class TrackCollectionAttribute : Attribute
 public class TrackOnlyAttribute : Attribute
 {
 }
+
+/// <summary>
+///     Marks a property for deep change tracking, enabling automatic inclusion in the static
+///     constructor's deep tracking configuration. Properties marked with this attribute will
+///     be automatically added to the DeepTracking&lt;T&gt;.SetTrackableProperties array.
+/// </summary>
+/// <remarks>
+///     This attribute is used to identify properties that should participate in deep change
+///     tracking without requiring manual configuration in the static constructor. The source
+///     generator will automatically detect properties with this attribute and include them
+///     in the deep tracking setup.
+/// </remarks>
+/// <example>
+///     <code>
+///     [Trackable]
+///     public partial class Order
+///     {
+///         [DeepTracking]
+///         public partial Customer Customer { get; set; }
+///         
+///         [DeepTracking]
+///         public partial List&lt;OrderItem&gt; Items { get; set; }
+///     }
+///     </code>
+/// </example>
+[AttributeUsage(AttributeTargets.Property)]
+public class DeepTrackingAttribute : Attribute
+{
+}

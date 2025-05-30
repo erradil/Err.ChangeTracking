@@ -140,13 +140,14 @@ The source generator automatically implements:
 - Public, `partial` properties are eligible
 - Attributes control behavior:
 
-| Attribute | Behavior |
-|-----------|----------|
-| `[TrackOnly]` | Track this property only (when using `TrackingMode.OnlyMarked`) |
-| `[NotTracked]` | Exclude this property from tracking |
-| `[TrackCollection]` | Track changes inside List/Dictionary items |
-| `TrackingMode.All` | (default) track all eligible properties |
-| `TrackingMode.OnlyMarked` | Only track `[TrackOnly]` properties |
+| Attribute                 | Behavior                                                        |
+|---------------------------|-----------------------------------------------------------------|
+| `[TrackOnly]`             | Track this property only (when using `TrackingMode.OnlyMarked`) |
+| `[DeepTracking]`          | do deep tracking fro this property                              |
+| `[NotTracked]`            | Exclude this property from tracking                             |
+| `[TrackCollection]`       | Track changes inside List/Dictionary items                      |
+| `TrackingMode.All`        | (default) track all eligible properties                         |
+| `TrackingMode.OnlyMarked` | Only track `[TrackOnly]` properties                             |
 
 ## 🧪 Examples From Unit Tests
 

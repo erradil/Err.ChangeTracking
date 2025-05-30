@@ -143,12 +143,17 @@ internal class PropertyDisplayHelper
     ///     Returns the track delegate expression for use in static constructor
     /// </summary>
     /// <returns>Delegate expression for deep change tracking</returns>
-    public string ToDisplayTrackDelegate()
+    public string ToDisplayDeepTrackingDelegate()
     {
+        if (!_property.HasDeepTrackingAttribute)
+            return string.Empty;
+
+        //return $"x => x.{_property.Name} as IBaseTracker ?? x.{_property.Name}?.GetChangeTracker()";
         if (_property.IsTypeImplementsTrackable)
-            return $"x => x.{_property.Name}?.GetChangeTracker()";
+            return $"x => x.{_property.Name}?.GetChangeTracker(),";
         if (_property.IsTrackableCollection || _property.IsAlreadyTrackableCollection)
-            return $"x => x.{_property.Name} as IBaseTracker";
+            return $"x => x.{_property.Name} as IBaseTracker,";
+
         return string.Empty;
     }
 

@@ -50,7 +50,7 @@ internal class TypeDisplayHelper
 
         // Add the ITrackable<T> interface if requested and not already implemented
         var interfaceImplementation = implementInterface && _typeInfo.AlreadyImplementsTrackable is false
-            ? $" : {Constants.Types.ITrackableFullName.Replace("<T>", $"<{GetFullName()}>")}"
+            ? $" : {Constants.Types.ITrackableFullName.Replace("<TEntity>", $"<{GetFullName()}>")}"
             : "";
 
         return
@@ -63,12 +63,11 @@ internal class TypeDisplayHelper
     public string ToDisplayStaticConstructor(string indent = "")
     {
         // Get all properties that are either trackable entities or collections
-        var trackableProperties = _typeInfo.Properties.Where(p =>
-            p.IsAlreadyTrackableCollection ||
-            p.IsTrackableCollection ||
-            p.IsTypeImplementsTrackable).ToList();
+        var deepTrackingProperties = _typeInfo.Properties.Where(p =>
+                p.HasDeepTrackingAttribute)
+            .ToList();
 
-        if (trackableProperties.Count == 0)
+        if (deepTrackingProperties.Count == 0)
             return string.Empty;
 
         var sb = new StringBuilder();
@@ -80,10 +79,10 @@ internal class TypeDisplayHelper
             $"{indent}    {Constants.Types.DeepTrackingFullName.Replace("<T>", $"<{_typeInfo.Name}>")}.SetTrackableProperties([");
 
         // Generate delegates for each trackable property
-        foreach (var property in trackableProperties)
+        foreach (var property in deepTrackingProperties)
         {
             var propertyDisplay = new PropertyDisplayHelper(property);
-            sb.AppendLine($"{indent}        {propertyDisplay.ToDisplayTrackDelegate()},");
+            sb.AppendLine($"{indent}        {propertyDisplay.ToDisplayDeepTrackingDelegate()}");
         }
 
         sb.AppendLine($"{indent}    ]);");

@@ -116,6 +116,12 @@ internal class PropertyHelper(IPropertySymbol propertySymbol)
     public bool HasTrackCollectionAttribute => HasAttribute(Constants.Types.TrackCollectionAttributeFullName);
 
     /// <summary>
+    ///     Check if the property has [DeepTracking] attribute
+    /// </summary>
+    public bool HasDeepTrackingAttribute => HasAttribute(Constants.Types.DeepTrackingAttributeFullName);
+
+
+    /// <summary>
     ///     Check if the property is already a trackable collection
     /// </summary>
     public (bool isTrackableCollection, string? collectionWrapperType) GetTrackableCollectionInfo()
@@ -163,11 +169,12 @@ internal class PropertyHelper(IPropertySymbol propertySymbol)
         IsTypeOf(Constants.Types.TrackableDictionaryFullName);
 
     /// <summary>
-    ///     Check if the property's type implements ITrackable interface
+    ///     Check if the property's type implements ITrackable interface or has [Trackable] attribute
     /// </summary>
     public bool IsTypeImplementsTrackable =>
         _propertySymbol.Type is INamedTypeSymbol namedType &&
-        ImplementsInterface(namedType, Constants.Types.ITrackableFullName);
+        (ImplementsInterface(namedType, Constants.Types.ITrackableBaseFullName)
+         || HasTrackableAttribute(namedType));
 
     /// <summary>
     ///     Check if the property is of a specific type
@@ -225,6 +232,7 @@ internal class PropertyHelper(IPropertySymbol propertySymbol)
             IsNullable = IsNullable,
             HasTrackOnlyAttribute = HasTrackOnlyAttribute,
             HasTrackCollectionAttribute = HasTrackCollectionAttribute,
+            HasDeepTrackingAttribute = HasDeepTrackingAttribute,
             IsAlreadyTrackableCollection = IsAlreadyTrackableCollection,
             IsTypeImplementsTrackable = IsTypeImplementsTrackable
         };

@@ -44,7 +44,7 @@ public partial class OrderItem
     public partial decimal UnitPrice { get; set; }
 
     // Case 9: Reference to another trackable object
-    public partial Product Product { get; set; }
+    [DeepTracking] public partial Product Product { get; set; }
 }
 
 // Case 10: Class with selective tracking mode

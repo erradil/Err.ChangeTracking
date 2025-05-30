@@ -170,6 +170,11 @@ internal record struct PropertyInfo
     public bool HasTrackCollectionAttribute { get; set; }
 
     /// <summary>
+    ///     Whether the property has the DeepTracking attribute
+    /// </summary>
+    public bool HasDeepTrackingAttribute { get; set; }
+
+    /// <summary>
     ///     Whether the property type is already a trackable collection
     /// </summary>
     public bool IsAlreadyTrackableCollection { get; set; }
