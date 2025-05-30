@@ -148,11 +148,11 @@ internal class PropertyDisplayHelper
         if (!_property.HasDeepTrackingAttribute)
             return string.Empty;
 
-        //return $"x => x.{_property.Name} as IBaseTracker ?? x.{_property.Name}?.GetChangeTracker()";
+        //return $"x => x.{_property.Name} as IChangeTrackerBase ?? x.{_property.Name}?.GetChangeTracker()";
         if (_property.IsTypeImplementsTrackable)
             return $"x => x.{_property.Name}?.GetChangeTracker(),";
         if (_property.IsTrackableCollection || _property.IsAlreadyTrackableCollection)
-            return $"x => x.{_property.Name} as IBaseTracker,";
+            return $"x => x.{_property.Name} as IChangeTrackerBase,";
 
         return string.Empty;
     }

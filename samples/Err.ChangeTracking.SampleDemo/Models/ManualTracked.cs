@@ -29,7 +29,7 @@ public class Model : ITrackable<Model>
         // we identify all trackable properties for deep tracking
         DeepTracking<Model>.SetTrackableProperties([
             x => x.SubModel?.GetChangeTracker(), // if property is Trackable<T>
-            x => x.Items as IBaseTracker // if property Is ITrackableCollection
+            x => x.Items as IChangeTrackerBase // if property Is ITrackableCollection
         ]);
     }
 

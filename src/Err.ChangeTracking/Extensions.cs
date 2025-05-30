@@ -21,7 +21,7 @@ public static class Extensions
     }
 
     public static TrackableDictionary<TKey, TValue> AsTrackable<TKey, TValue>(this Dictionary<TKey, TValue> dictionary)
-        where TValue : class
+        where TValue : class where TKey : notnull
     {
         if (dictionary is TrackableDictionary<TKey, TValue> trackable)
             return trackable;

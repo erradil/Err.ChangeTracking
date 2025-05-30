@@ -6,9 +6,9 @@ namespace Err.ChangeTracking;
 public static class DeepTracking<T>
 {
     private static readonly object _objLock = new();
-    private static List<Func<T, IBaseTracker?>>? _deepTrackableProperties;
+    private static List<Func<T, IChangeTrackerBase?>>? _deepTrackableProperties;
 
-    public static void SetTrackableProperties(List<Func<T, IBaseTracker?>> value)
+    public static void SetTrackableProperties(List<Func<T, IChangeTrackerBase?>> value)
     {
         lock (_objLock)
             _deepTrackableProperties ??= value;

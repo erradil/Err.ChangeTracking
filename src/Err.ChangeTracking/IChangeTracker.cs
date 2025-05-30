@@ -4,12 +4,12 @@ using System.Linq.Expressions;
 
 namespace Err.ChangeTracking;
 
-public interface IBaseTracker
+public interface IChangeTrackerBase
 {
     bool IsDirty(bool deepTracking = false);
 }
 
-public interface IChangeTracker<TEntity> : IBaseTracker
+public interface IChangeTracker<TEntity> : IChangeTrackerBase
 {
     bool IsEnabled { get; }
 
