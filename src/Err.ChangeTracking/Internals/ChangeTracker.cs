@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 
 namespace Err.ChangeTracking.Internals;
 
@@ -60,12 +61,23 @@ internal class ChangeTracker<TEntity>(TEntity instance) : IChangeTracker<TEntity
         return HasChanged(propertyName);
     }
 
+    public void RecordChange<TProperty>(TProperty? currentValue, TProperty? newValue,
+        [CallerMemberName] string? propertyName = null)
+    {
+        if (string.IsNullOrEmpty(propertyName))
+            throw new ArgumentException("Property name cannot be null or empty", nameof(propertyName));
+
+        RecordChange(propertyName, currentValue, newValue);
+    }
+
 
     public void RecordChange<TProperty>(string propertyName, TProperty? currentValue, TProperty? newValue)
     {
         if (!IsEnabled || EqualityComparer<TProperty?>.Default.Equals(newValue, currentValue))
             return;
 
+        if (string.IsNullOrEmpty(propertyName))
+            throw new ArgumentException("Property name cannot be null or empty", nameof(propertyName));
 
         if (_originalValues.TryGetValue(propertyName, out var originalValue))
         {

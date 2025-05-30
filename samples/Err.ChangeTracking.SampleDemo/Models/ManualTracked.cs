@@ -16,7 +16,7 @@ public class Model2 : ITrackableBase<Model2>
         get;
         set
         {
-            _changeTracker?.RecordChange(nameof(Name), field, value);
+            _changeTracker?.RecordChange(field, value);
             field = value;
         }
     }
@@ -38,7 +38,7 @@ public class Model : ITrackable<Model>
         get;
         set
         {
-            this.GetChangeTracker().RecordChange(nameof(Name), field, value);
+            this.GetChangeTracker().RecordChange(field, value);
             field = value;
         }
     }

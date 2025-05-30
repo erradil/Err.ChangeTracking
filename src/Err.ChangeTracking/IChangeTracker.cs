@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 
 namespace Err.ChangeTracking;
 
@@ -22,6 +23,9 @@ public interface IChangeTracker<TEntity> : IChangeTrackerBase
     IReadOnlyDictionary<string, object?> GetOriginalValues();
     public TProperty? GetOriginalValue<TProperty>(Expression<Func<TEntity, TProperty>> propertyExpression);
     public TProperty? GetOriginalValue<TProperty>(string propertyName);
+
+    void RecordChange<TProperty>(TProperty? currentValue, TProperty? newValue,
+        [CallerMemberName] string? propertyName = null);
 
     void RecordChange<TProperty>(string propertyName, TProperty currentValue, TProperty newValue);
 

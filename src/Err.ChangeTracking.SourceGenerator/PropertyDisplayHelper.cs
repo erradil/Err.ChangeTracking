@@ -86,7 +86,7 @@ internal class PropertyDisplayHelper
 
         if (!_property.IsStatic)
             return
-                $"{setterAccessibility}{accessorKeyword} {{ this.GetChangeTracker().RecordChange(nameof({_property.Name}), {_property.BackingFieldName}, value); {ToDisplayAssignment()} }}";
+                $"{setterAccessibility}{accessorKeyword} {{ this.GetChangeTracker().RecordChange({_property.BackingFieldName}, value); {ToDisplayAssignment()} }}";
 
         return $"{setterAccessibility}{accessorKeyword} {{ {ToDisplayAssignment()} }}";
     }
