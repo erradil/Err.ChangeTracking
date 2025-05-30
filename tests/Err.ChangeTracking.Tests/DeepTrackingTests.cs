@@ -33,6 +33,7 @@ public class DeepTrackingTests
         var model = new Model
         {
             Name = "ORD-001",
+            SubModel = new SubModel(),
             Items =
             [
                 new SubModel

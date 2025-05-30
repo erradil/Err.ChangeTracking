@@ -11,15 +11,13 @@ public class Model2 : ITrackableBase<Model2>
         return _changeTracker ??= ChangeTrackerFactory.GetOrCreate(this);
     }
 
-    private string _name;
-
-    public string Name
+    public required string Name
     {
-        get => _name;
+        get;
         set
         {
-            _changeTracker?.RecordChange(nameof(Name), _name, value);
-            _name = value;
+            _changeTracker?.RecordChange(nameof(Name), field, value);
+            field = value;
         }
     }
 }
@@ -35,15 +33,13 @@ public class Model : ITrackable<Model>
         ]);
     }
 
-    private string _name;
-
-    public string Name
+    public required string Name
     {
-        get => _name;
+        get;
         set
         {
-            this.GetChangeTracker().RecordChange(nameof(Name), _name, value);
-            _name = value;
+            this.GetChangeTracker().RecordChange(nameof(Name), field, value);
+            field = value;
         }
     }
 
@@ -60,15 +56,13 @@ public class Model : ITrackable<Model>
     }
 
 
-    private SubModel _subModel;
-
-    public SubModel SubModel
+    public required SubModel SubModel
     {
-        get => _subModel;
+        get;
         set
         {
-            this.GetChangeTracker().RecordChange(nameof(SubModel), _subModel, value);
-            _subModel = value;
+            this.GetChangeTracker().RecordChange(nameof(SubModel), field, value);
+            field = value;
         }
     }
 }
