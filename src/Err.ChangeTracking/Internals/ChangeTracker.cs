@@ -40,7 +40,8 @@ internal class ChangeTracker<TEntity>(TEntity instance) : IChangeTracker<TEntity
 
     public TProperty? GetOriginalValue<TProperty>(string propertyName)
     {
-        if (_originalValues.TryGetValue(propertyName, out var value) is true) return (TProperty?)value;
+        if (_originalValues.TryGetValue(propertyName, out var value)) 
+            return (TProperty?)value;
 
         return default;
     }
@@ -61,17 +62,12 @@ internal class ChangeTracker<TEntity>(TEntity instance) : IChangeTracker<TEntity
         return HasChanged(propertyName);
     }
 
+    [Obsolete("Use RecordChange(currentValue, newValue) instead. The property name is now captured automatically via [CallerMemberName].")]
+    public void RecordChange<TProperty>(string propertyName, TProperty? currentValue, TProperty? newValue)
+        => RecordChange(currentValue, newValue,propertyName);
+   
     public void RecordChange<TProperty>(TProperty? currentValue, TProperty? newValue,
         [CallerMemberName] string? propertyName = null)
-    {
-        if (string.IsNullOrEmpty(propertyName))
-            throw new ArgumentException("Property name cannot be null or empty", nameof(propertyName));
-
-        RecordChange(propertyName, currentValue, newValue);
-    }
-
-
-    public void RecordChange<TProperty>(string propertyName, TProperty? currentValue, TProperty? newValue)
     {
         if (!IsEnabled || EqualityComparer<TProperty?>.Default.Equals(newValue, currentValue))
             return;

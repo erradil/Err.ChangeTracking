@@ -5,12 +5,12 @@ using System.Runtime.CompilerServices;
 
 namespace Err.ChangeTracking;
 
-public interface IChangeTrackerBase
+public interface IChangeTracker
 {
     bool IsDirty(bool deepTracking = false);
 }
 
-public interface IChangeTracker<TEntity> : IChangeTrackerBase
+public interface IChangeTracker<TEntity> : IChangeTracker
 {
     bool IsEnabled { get; }
 
@@ -27,6 +27,7 @@ public interface IChangeTracker<TEntity> : IChangeTrackerBase
     void RecordChange<TProperty>(TProperty? currentValue, TProperty? newValue,
         [CallerMemberName] string? propertyName = null);
 
+    [Obsolete("Use RecordChange(currentValue, newValue) instead. The property name is now captured automatically via [CallerMemberName].")]
     void RecordChange<TProperty>(string propertyName, TProperty currentValue, TProperty newValue);
 
     void Rollback();

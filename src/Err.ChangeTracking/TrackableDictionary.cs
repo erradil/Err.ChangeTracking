@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Err.ChangeTracking;
 
-public class TrackableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IChangeTrackerBase
+public class TrackableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IChangeTracker
     where TValue : class
     where TKey : notnull
 {
@@ -78,7 +78,7 @@ public class TrackableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IChan
     public bool IsDirty(bool deepTracking = false)
     {
         return _hasStructuralChanges ||
-               Values.OfType<ITrackable<TValue>>().Any(x => x.GetChangeTracker().IsDirty(deepTracking));
+               Values.OfType<ITrackable<TValue>>().Any(x => x.TryGetChangeTracker()?.IsDirty(deepTracking) ?? false);
     }
 
     #region Item Access and Assignment

@@ -50,7 +50,7 @@ internal class TypeDisplayHelper
 
         // Add the ITrackable<T> interface if requested and not already implemented
         var interfaceImplementation = implementInterface && _typeInfo.AlreadyImplementsTrackable is false
-            ? $" : {Constants.Types.ITrackableFullName.Replace("<TEntity>", $"<{GetFullName()}>")}"
+            ? $" : {Constants.Types.ITrackableFullName.Replace("<TEntity>", $"<{GetFullName()}>")}, {Constants.Types.IAttachedTrackerFullName.Replace("<TEntity>", $"<{GetFullName()}>")}"
             : "";
 
         return
@@ -90,37 +90,7 @@ internal class TypeDisplayHelper
 
         return sb.ToString();
     }
-
-    /// <summary>
-    ///     Returns the complete type implementation including all properties
-    /// </summary>
-    public string ToDisplayFullType(string indent = "")
-    {
-        var sb = new StringBuilder();
-
-        // Type comment and declaration
-        sb.AppendLine($"{indent}// Auto-generated implementation for {_typeInfo.Name}");
-        sb.AppendLine($"{indent}{ToDisplayDeclaration()}");
-        sb.AppendLine($"{indent}{{");
-
-        // Add static constructor for deep tracking
-        var staticCtor = ToDisplayStaticConstructor(indent + "    ");
-        if (!string.IsNullOrEmpty(staticCtor)) sb.AppendLine(staticCtor);
-
-        // Add all property implementations
-        foreach (var property in _typeInfo.Properties)
-            if (!property.IsAlreadyTrackableCollection)
-            {
-                var propertyDisplay = new PropertyDisplayHelper(property);
-                sb.AppendLine(propertyDisplay.ToDisplayFullProperty(indent + "    "));
-            }
-
-        // Close the type declaration
-        sb.AppendLine($"{indent}}}");
-
-        return sb.ToString();
-    }
-
+    
     /// <summary>
     ///     Convert an accessibility level to its string representation
     /// </summary>

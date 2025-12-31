@@ -5,7 +5,6 @@ public partial record Order
 {
     // case 3: Property already implemented, so we explicitly excluded from tracking 
     private DateTime _createdDate;
-
     public partial DateTime CreatedDate
     {
         get => _createdDate;
@@ -26,13 +25,13 @@ public partial record Order
     [TrackCollection] public partial List<string> Tags { get; set; }
 
     // Case 5: Tracked collection of OrderItem objects
-    [TrackCollection] public partial List<OrderItem> Items { get; set; }
+    [TrackCollection, DeepTracking] public partial List<OrderItem> Items { get; set; }
 
     // Case 6: Non-partial property (won't be tracked)
     public string? Notes { get; set; }
 
-    // Case 7: Already by default trackable property
-    public TrackableList<string>? Options { get; set; }
+    // Case 7: Tracked Dictionary collection of simple types
+    [TrackCollection, DeepTracking] public partial Dictionary<string, string> Options { get; set; }
 }
 
 // Case 7: Another trackable class for order items

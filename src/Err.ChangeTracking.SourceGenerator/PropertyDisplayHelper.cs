@@ -86,7 +86,8 @@ internal class PropertyDisplayHelper
 
         if (!_property.IsStatic)
             return
-                $"{setterAccessibility}{accessorKeyword} {{ this.GetChangeTracker().RecordChange({_property.BackingFieldName}, value); {ToDisplayAssignment()} }}";
+                $"{setterAccessibility}{accessorKeyword} => this.SetField(ref {_property.BackingFieldName}!, value);";
+                //$"{setterAccessibility}{accessorKeyword} {{ this.GetChangeTracker()?.RecordChange({_property.BackingFieldName}, value); {ToDisplayAssignment()} }}";
 
         return $"{setterAccessibility}{accessorKeyword} {{ {ToDisplayAssignment()} }}";
     }
@@ -150,9 +151,9 @@ internal class PropertyDisplayHelper
 
         //return $"x => x.{_property.Name} as IChangeTrackerBase ?? x.{_property.Name}?.GetChangeTracker()";
         if (_property.IsTypeImplementsTrackable)
-            return $"x => x.{_property.Name}?.GetChangeTracker(),";
+            return $"x => x.{_property.Name}?.TryGetChangeTracker(),";
         if (_property.IsTrackableCollection || _property.IsAlreadyTrackableCollection)
-            return $"x => x.{_property.Name} as IChangeTrackerBase,";
+            return $"x => x.{_property.Name}?.TryGetChangeTracker(),";
 
         return string.Empty;
     }

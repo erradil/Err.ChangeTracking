@@ -8,9 +8,9 @@ internal partial record Person
     public TrackableDictionary<string, object>? Tags { get; set; }
 
     public TrackableList<string>? Options { get; set; }
-    [DeepTracking] public partial Address? Addr { get; set; }
-
-    [TrackCollection] [DeepTracking] public partial List<string>? Options2 { get; set; }
+    
+    [DeepTracking] 
+    public partial Address? Addr { get; set; }
 
     [Trackable]
     public partial record Address
