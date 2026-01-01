@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Err.ChangeTracking;
 
-public class TrackableList<T> : List<T>, IChangeTrackerBase
+public class TrackableList<T> : List<T>, IChangeTracker
     where T : class
 {
     private bool _hasStructuralChanges;
@@ -32,7 +32,7 @@ public class TrackableList<T> : List<T>, IChangeTrackerBase
     public bool IsDirty(bool deepTracking = false)
     {
         return _hasStructuralChanges ||
-               this.OfType<ITrackable<T>>().Any(x => x.GetChangeTracker().IsDirty(deepTracking));
+               this.OfType<ITrackable<T>>().Any(x => x.TryGetChangeTracker()?.IsDirty(deepTracking) ?? false);
     }
 
     #region Item Access and Assignment

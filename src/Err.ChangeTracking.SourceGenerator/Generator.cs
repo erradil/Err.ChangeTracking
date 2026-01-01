@@ -148,6 +148,12 @@ public class ChangeTrackerGenerator : IIncrementalGenerator
         indent++;
         var contentIndent = GetIndentation(indent);
 
+        // Generate IAttachedTracker.ChangeTracker property
+        sourceBuilder
+            .AppendLine($"{contentIndent}// Attaches change tracker to instance (direct field access, faster than cache-based tracking (default))")
+            .AppendLine($"{contentIndent}IChangeTracker<{typeInfo.Name}>? {Constants.Types.IAttachedTrackerFullName.Replace("<TEntity>", $"<{typeInfo.Name}>.ChangeTracker {{ get; set; }}")}")
+            .AppendLine();
+        
         // Generate static constructor for deep tracking if needed
         var staticCtor = typeDisplay.ToDisplayStaticConstructor(contentIndent);
         if (!string.IsNullOrEmpty(staticCtor)) sourceBuilder.AppendLine(staticCtor);

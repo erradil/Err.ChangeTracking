@@ -13,4 +13,11 @@ internal static class TrackingCache<T> where T : class
     {
         return Cache.GetValue(instance, ChangeTracker<T>.Create);
     }
+    
+    public static IChangeTracker<T>? TryGet(T instance)
+    {
+        return Cache.TryGetValue(instance, out IChangeTracker<T> changeTracker)
+            ? changeTracker
+            : null;
+    }
 }

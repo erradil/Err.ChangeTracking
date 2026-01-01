@@ -173,7 +173,7 @@ internal class PropertyHelper(IPropertySymbol propertySymbol)
     /// </summary>
     public bool IsTypeImplementsTrackable =>
         _propertySymbol.Type is INamedTypeSymbol namedType &&
-        (ImplementsInterface(namedType, Constants.Types.ITrackableBaseFullName)
+        (ImplementsInterface(namedType, Constants.Types.IAttachedTrackerFullName)
          || HasTrackableAttribute(namedType));
 
     /// <summary>

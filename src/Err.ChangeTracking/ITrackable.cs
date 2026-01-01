@@ -1,17 +1,27 @@
-﻿namespace Err.ChangeTracking;
+﻿using Err.ChangeTracking.Internals;
 
-public interface ITrackableBase<TEntity> where TEntity : class
+namespace Err.ChangeTracking;
+
+public interface IAttachedTracker<TEntity> where TEntity : class
+{
+    IChangeTracker<TEntity>? ChangeTracker { get; set; }
+}
+
+public interface ITrackable<TEntity> where TEntity : class
 {
     /// <summary>
     ///     Gets the change tracker for this entity
     /// </summary>
-    IChangeTracker<TEntity> GetChangeTracker();
-}
-
-public interface ITrackable<TEntity> : ITrackableBase<TEntity> where TEntity : class
-{
-    IChangeTracker<TEntity> ITrackableBase<TEntity>.GetChangeTracker()
-    {
-        return ChangeTrackerFactory.GetOrCreate((TEntity)this);
-    }
+    IChangeTracker<TEntity>? TryGetChangeTracker()
+        =>  (this is IAttachedTracker<TEntity> tracker)
+            ? tracker.ChangeTracker
+            :TrackingCache<TEntity>.TryGet((TEntity)this);
+    
+    /// <summary>
+    ///     Gets Or Create the change tracker for this entity
+    /// </summary>
+    IChangeTracker<TEntity> GetOrCreateChangeTracker() 
+        => (this is IAttachedTracker<TEntity> tracker)
+            ? tracker.ChangeTracker ??= ChangeTracker<TEntity>.Create((TEntity)this)
+            : TrackingCache<TEntity>.GetOrCreate((TEntity)this);
 }

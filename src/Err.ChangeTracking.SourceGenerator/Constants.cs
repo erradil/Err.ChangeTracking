@@ -12,7 +12,7 @@ public static class Constants
         public const string TrackCollectionAttributeFullName = $"{Namespace}.TrackCollectionAttribute";
         public const string DeepTrackingAttributeFullName = $"{Namespace}.DeepTrackingAttribute";
 
-        public const string ITrackableBaseFullName = $"{Namespace}.ITrackableBase<TEntity>";
+        public const string IAttachedTrackerFullName = $"{Namespace}.IAttachedTracker<TEntity>";
         public const string ITrackableFullName = $"{Namespace}.ITrackable<TEntity>";
         public const string DeepTrackingFullName = $"{Namespace}.DeepTracking<T>";
 
