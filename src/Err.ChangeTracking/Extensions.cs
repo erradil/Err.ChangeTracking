@@ -1,76 +1,76 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Err.ChangeTracking.Internals;
 
 namespace Err.ChangeTracking;
 
 public static class Extensions
 {
-    public static IChangeTracker<T>? TryGetChangeTracker<T>(this ITrackable<T> model)
-        where T : class, ITrackable<T>
-        => model.TryGetChangeTracker();
-    
-    public static IChangeTracker<T> GetChangeTracker<T>(this ITrackable<T> model)
-        where T : class, ITrackable<T>
-        => model.TryGetChangeTracker() 
-           ?? throw new InvalidOperationException("ChangeTracker is not initialized!. Use AsTrackable() first. Or use TryGetChangeTracker() instead.");
-    
-    public static IChangeTracker? TryGetChangeTracker<T>(this List<T> model) 
-        where T : class 
-        => model as TrackableList<T> ;
-    
-    public static IChangeTracker? TryGetChangeTracker<TKey,TValue>(this Dictionary<TKey,TValue> model) 
-        where TValue : class
-        where TKey : notnull
-        => model as TrackableDictionary<TKey, TValue> ;
+    extension<TEntity>(TEntity entity) where TEntity : class
+    {
+        public TEntity AsTrackable()
+        {
+            if (entity is ITrackable<TEntity> trackable)
+                trackable.GetOrCreateChangeTracker().Enable();
 
+            return entity;
+        }
+    }
 
-    public static T AsTrackable<T>(this T model)
+    extension<TEntity>(ITrackable<TEntity> trackable) 
+        where TEntity : class
+    {
+        private IChangeTracker<TEntity> GetOrCreateChangeTracker() 
+            => (trackable is IAttachedTracker<TEntity> tracker)
+                ? tracker.ChangeTracker ??= ChangeTracker<TEntity>.Create((TEntity)trackable)
+                : TrackingCache<TEntity>.GetOrCreate((TEntity)trackable);
+        
+        public IChangeTracker<TEntity> GetChangeTracker() 
+            => trackable.TryGetChangeTracker() 
+               ?? throw new InvalidOperationException("ChangeTracker is not initialized!. Use AsTrackable() first. Or use TryGetChangeTracker() instead.");
+
+        public IChangeTracker<TEntity>? TryGetChangeTracker()
+            =>(trackable is IAttachedTracker<TEntity> tracker)
+                ? tracker.ChangeTracker
+                :TrackingCache<TEntity>.TryGet((TEntity)trackable);
+        
+        public void SetField<TField>(ref TField? field, TField value, [CallerMemberName] string? propertyName = null)
+        {
+            trackable.TryGetChangeTracker()?.RecordChange(field, value,  propertyName);
+            field = value;
+        }
+        
+        public void SetField<TValue>(ref TrackableList<TValue>? field, List< TValue>? value, [CallerMemberName] string? propertyName = null)
+            where TValue : class
+            => trackable.SetField(ref field, value is null ? null : new TrackableList<TValue>(value),  propertyName);
+        
+        public void SetField<TKey, TValue>(ref TrackableDictionary<TKey, TValue>? field, Dictionary<TKey, TValue>?value, [CallerMemberName] string? propertyName = null)
+            where TValue : class
+            where TKey : notnull
+            => trackable.SetField(ref field, value is null ? null : new TrackableDictionary<TKey, TValue>(value),  propertyName);
+    }
+
+    extension<T>(List<T> collection)
         where T : class
     {
-        if (model is ITrackable<T> trackable)
-            trackable.GetOrCreateChangeTracker()?.Enable();
-
-        return model;
-    }
-
-    public static TrackableDictionary<TKey, TValue> AsTrackable<TKey, TValue>(this Dictionary<TKey, TValue> dictionary)
-        where TValue : class where TKey : notnull
-    {
-        if (dictionary is TrackableDictionary<TKey, TValue> trackable)
-            return trackable;
-
-        throw new ArgumentException("The dictionary is not TrackableDictionary<TKey,TValue>.", nameof(dictionary));
-    }
-
-    public static TrackableList<T> AsTrackable<T>(this List<T> collection)
-        where T : class
-    {
-        if (collection is TrackableList<T> trackable)
-            return trackable;
-
-        throw new ArgumentException("The collection is not TrackableList<T>.", nameof(collection));
+        public IChangeTracker? TryGetChangeTracker()
+            => collection as IChangeTracker;
+        
+        public TrackableList<T> AsTrackable()
+            => collection as TrackableList<T>
+               ?? throw new ArgumentException("The collection is not TrackableList<T>.", nameof(collection));
     }
     
-    public static void SetField<TEntity, TField>(this ITrackable<TEntity> trackable, ref TField? field, TField value, [CallerMemberName] string? propertyName = null)
-        where TEntity : class
-    {
-        trackable.TryGetChangeTracker()?.RecordChange(field, value,  propertyName);
-        field = value;
-    }
-    
-    public static void SetField<TEntity, TValue>(this ITrackable<TEntity> trackable, ref TrackableList<TValue>? field, List< TValue>? value, [CallerMemberName] string? propertyName = null)
-        where TEntity : class
-        where TValue : class
-    {
-        trackable.SetField(ref field, value is null ? null : new TrackableList<TValue>(value),  propertyName);
-    }
-    
-    public static void SetField<TEntity, TKey, TValue>(this ITrackable<TEntity> trackable, ref TrackableDictionary<TKey, TValue>? field, Dictionary<TKey, TValue>?value, [CallerMemberName] string? propertyName = null)
-        where TEntity : class
-        where TValue : class
+    extension<TKey, TValue>(Dictionary<TKey, TValue> dictionary) 
+        where TValue : class 
         where TKey : notnull
     {
-        trackable.SetField(ref field, value is null ? null : new TrackableDictionary<TKey, TValue>(value),  propertyName);
+        public IChangeTracker? TryGetChangeTracker()
+            => dictionary as IChangeTracker;
+        
+        public TrackableDictionary<TKey, TValue> AsTrackable()
+            => dictionary as TrackableDictionary<TKey, TValue> 
+               ?? throw new ArgumentException("The collection is not TrackableDictionary<TKey,TValue>", nameof(dictionary));
     }
 }

@@ -15,23 +15,11 @@ public class Model : ITrackable<Model>, IAttachedTracker<Model>
         ]);
     }
     
-    public required string Name
-    {
-        get;
-        set => this.SetField(ref field!, value);
-    }
+    public required string Name { get; set => this.SetField(ref field!, value); }
     
-    public List<SubModel>? Items
-    {
-        get;
-        set => this.SetField(ref field, value);
-    }
+    public List<SubModel>? Items { get; set => this.SetField(ref field, value); }
 
-    public SubModel? SubModel
-    {
-        get;
-        set => this.SetField(ref field!, value);
-    }
+    public SubModel? SubModel { get; set => this.SetField(ref field, value); }
 }
 
 [Trackable]
