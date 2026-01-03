@@ -5,6 +5,30 @@ namespace Err.ChangeTracking.Tests;
 public class PropertyTrackingTests
 {
     [Fact]
+    public void Property_AutoTracking_Workflow()
+    {
+        // Arrange
+        var person = new Person
+        { 
+            Addr = new Person.Address { Street = "123 Main St" } // no need to AsTrackable here, auto-tracking handles it
+        }.AsTrackable();
+        
+        var tracker = person.GetChangeTracker();
+        var addrTracker = person.Addr!.GetChangeTracker();
+        Assert.False(tracker.IsDirty());
+        Assert.False(addrTracker.IsDirty());
+        
+        // Act - Change auto-tracked property
+        person.Addr!.Street = "456 Elm St";
+        
+        // Assert - Verify tracking
+        Assert.True(addrTracker.IsDirty());
+        Assert.True(tracker.IsDirty(deepTracking:true));
+        Assert.False(tracker.HasChanged(x => x.Addr)); // this property itself isn't changed
+        Assert.True(addrTracker.HasChanged(x => x.Street));
+    }
+
+    [Fact]
     public void Property_Tracking_Workflow()
     {
         // Arrange

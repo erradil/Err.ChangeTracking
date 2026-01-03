@@ -22,7 +22,7 @@ public static class DeepTracking<T>
         foreach (var getProperty in _deepTrackableProperties)
         {
             var value = getProperty(entity);
-            if (value?.IsDirty(true) is true)
+            if (value?.IsDirty(deepTracking: true) is true)
                 return true;
         }
 

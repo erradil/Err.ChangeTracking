@@ -1,7 +1,7 @@
 namespace Err.ChangeTracking.SampleDemo.Models;
 
 [Trackable(Mode = TrackingMode.All)]
-internal partial record Person
+public partial record Person
 {
     public partial string Name { get; set; }
 

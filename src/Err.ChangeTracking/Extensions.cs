@@ -21,6 +21,13 @@ public static class Extensions
     extension<TEntity>(ITrackable<TEntity> trackable) 
         where TEntity : class
     {
+        
+        public TEntity AsTrackable()
+        {
+            trackable.GetOrCreateChangeTracker().Enable();
+            return (TEntity)trackable;
+        }
+        
         private IChangeTracker<TEntity> GetOrCreateChangeTracker() 
             => (trackable is IAttachedTracker<TEntity> tracker)
                 ? tracker.ChangeTracker ??= ChangeTracker<TEntity>.Create((TEntity)trackable)
@@ -35,12 +42,27 @@ public static class Extensions
                 ? tracker.ChangeTracker
                 :TrackingCache<TEntity>.TryGet((TEntity)trackable);
         
-        public void SetField<TField>(ref TField? field, TField value, [CallerMemberName] string? propertyName = null)
+        public void SetField<TField, TValue>(ref TField? field, TValue value, [CallerMemberName] string? propertyName = null)
+            where TValue : struct, TField
+        {
+            trackable.TryGetChangeTracker()?.RecordChange(field, value ,  propertyName);
+            field = value;
+        }
+        
+        public void SetField<TField>(ref TField? field, TField? value, [CallerMemberName] string? propertyName = null)
+            where TField: struct
         {
             trackable.TryGetChangeTracker()?.RecordChange(field, value,  propertyName);
             field = value;
         }
         
+        public void SetField<TField>(ref TField? field, TField? value, [CallerMemberName] string? propertyName = null)
+            where TField: class
+        {
+            trackable.TryGetChangeTracker()?.RecordChange(field, value,  propertyName);
+            field = value?.AsTrackable();
+        }
+
         public void SetField<TValue>(ref TrackableList<TValue>? field, List< TValue>? value, [CallerMemberName] string? propertyName = null)
             where TValue : class
             => trackable.SetField(ref field, value is null ? null : new TrackableList<TValue>(value),  propertyName);

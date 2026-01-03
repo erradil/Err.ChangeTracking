@@ -39,8 +39,8 @@ public partial record Order
 public partial class OrderItem
 {
     // Case 8: Simple tracked properties
-    public partial int Quantity { get; set; }
-    public partial decimal UnitPrice { get; set; }
+    public partial int? Quantity { get; set; }
+    public partial decimal? UnitPrice { get; set; }
 
     // Case 9: Reference to another trackable object
     [DeepTracking] public partial Product Product { get; set; }
