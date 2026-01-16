@@ -3,11 +3,26 @@ using System.Linq;
 
 namespace Err.ChangeTracking;
 
-public class TrackableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IChangeTracker
+public class TrackableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, ITrackableCollection
     where TValue : class
     where TKey : notnull
 {
     private bool _hasStructuralChanges;
+    
+    public bool DeepTracking { get; private set; }
+    public void UseDeepTracking()
+    {
+        if (DeepTracking) return;
+        
+        DeepTracking = true;
+        foreach(var item in Values)
+        {
+            // Only process items that implement ITrackable
+            if(item is not ITrackable) 
+                break;
+            item.AsTrackable(deepTracking: DeepTracking);
+        }
+    }
 
     public TrackableDictionary()
     {
@@ -34,7 +49,7 @@ public class TrackableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IChan
             EnsureCapacity(dictionary.Count);
 
         foreach (var pair in dictionary)
-            base.Add(pair.Key, pair.Value.AsTrackable());
+            base.Add(pair.Key, pair.Value.AsTrackable(deepTracking: DeepTracking));
     }
 
     public TrackableDictionary(IDictionary<TKey, TValue>? dictionary, IEqualityComparer<TKey>? comparer) :
@@ -47,7 +62,7 @@ public class TrackableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IChan
             EnsureCapacity(dictionary.Count);
 
         foreach (var pair in dictionary)
-            base.Add(pair.Key, pair.Value.AsTrackable());
+            base.Add(pair.Key, pair.Value.AsTrackable(deepTracking: DeepTracking));
     }
 
     public TrackableDictionary(IEnumerable<KeyValuePair<TKey, TValue>>? collection)
@@ -59,7 +74,7 @@ public class TrackableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IChan
             EnsureCapacity(coll.Count);
 
         foreach (var pair in collection)
-            base.Add(pair.Key, pair.Value.AsTrackable());
+            base.Add(pair.Key, pair.Value.AsTrackable(deepTracking: DeepTracking));
     }
 
     public TrackableDictionary(IEnumerable<KeyValuePair<TKey, TValue>>? collection, IEqualityComparer<TKey>? comparer) :
@@ -72,13 +87,18 @@ public class TrackableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IChan
             EnsureCapacity(coll.Count);
 
         foreach (var pair in collection)
-            base.Add(pair.Key, pair.Value.AsTrackable());
+            base.Add(pair.Key, pair.Value.AsTrackable(deepTracking: DeepTracking));
     }
 
-    public bool IsDirty(bool deepTracking = false)
+    public bool IsDirty(bool? deepTracking = null)
     {
-        return _hasStructuralChanges ||
-               Values.OfType<ITrackable<TValue>>().Any(x => x.TryGetChangeTracker()?.IsDirty(deepTracking) ?? false);
+        if (_hasStructuralChanges) return true;
+        
+        var useDeepTracking = deepTracking ?? DeepTracking;
+        if (!useDeepTracking) return false;
+
+        return this.OfType<ITrackable<TValue>>()
+            .Any(x => x.TryGetChangeTracker()?.IsDirty(deepTracking: true) ?? false);
     }
 
     #region Item Access and Assignment
@@ -89,7 +109,7 @@ public class TrackableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IChan
         set
         {
             _hasStructuralChanges = true;
-            base[key] = value.AsTrackable();
+            base[key] = value.AsTrackable(deepTracking: DeepTracking);
         }
     }
 
@@ -109,12 +129,12 @@ public class TrackableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IChan
     public new void Add(TKey key, TValue value)
     {
         _hasStructuralChanges = true;
-        base.Add(key, value.AsTrackable());
+        base.Add(key, value.AsTrackable(deepTracking: DeepTracking));
     }
 
     public new bool TryAdd(TKey key, TValue value)
     {
-        var result = base.TryAdd(key, value.AsTrackable());
+        var result = base.TryAdd(key, value.AsTrackable(deepTracking: DeepTracking));
         if (result)
             _hasStructuralChanges = true;
         return result;

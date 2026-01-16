@@ -157,7 +157,7 @@ public class TrackOnlyAttribute : Attribute
 /// <summary>
 ///     Marks a property for deep change tracking, enabling automatic inclusion in the static
 ///     constructor's deep tracking configuration. Properties marked with this attribute will
-///     be automatically added to the DeepTracking&lt;T&gt;.SetTrackableProperties array.
+///     be automatically added to the DeepTracking&lt;T&gt;.Track().
 /// </summary>
 /// <remarks>
 ///     This attribute is used to identify properties that should participate in deep change

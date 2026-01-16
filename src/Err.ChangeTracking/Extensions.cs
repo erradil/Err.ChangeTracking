@@ -9,22 +9,26 @@ public static class Extensions
 {
     extension<TEntity>(TEntity entity) where TEntity : class
     {
-        public TEntity AsTrackable()
+        public TEntity AsTrackable(bool deepTracking = false)
         {
             if (entity is ITrackable<TEntity> trackable)
-                trackable.GetOrCreateChangeTracker().Enable();
+                trackable.AsTrackable(deepTracking);
 
             return entity;
         }
     }
-
+    
     extension<TEntity>(ITrackable<TEntity> trackable) 
         where TEntity : class
     {
         
-        public TEntity AsTrackable()
+        public TEntity AsTrackable(bool deepTracking = false)
         {
-            trackable.GetOrCreateChangeTracker().Enable();
+            var changeTracking  = trackable.GetOrCreateChangeTracker().Enable();
+            
+            if (!changeTracking.DeepTracking && deepTracking)
+                changeTracking.UseDeepTracking();
+            
             return (TEntity)trackable;
         }
         
@@ -42,13 +46,15 @@ public static class Extensions
                 ? tracker.ChangeTracker
                 :TrackingCache<TEntity>.TryGet((TEntity)trackable);
         
-        public void SetField<TField, TValue>(ref TField? field, TValue value, [CallerMemberName] string? propertyName = null)
+        // SetField overloads for primitive types
+        public void SetField<TField, TValue>(ref TField field, TValue value, [CallerMemberName] string? propertyName = null)
             where TValue : struct, TField
         {
             trackable.TryGetChangeTracker()?.RecordChange(field, value ,  propertyName);
             field = value;
         }
         
+        // SetField overloads for nullable primitive types
         public void SetField<TField>(ref TField? field, TField? value, [CallerMemberName] string? propertyName = null)
             where TField: struct
         {
@@ -56,11 +62,15 @@ public static class Extensions
             field = value;
         }
         
+        // SetField overloads for reference types
         public void SetField<TField>(ref TField? field, TField? value, [CallerMemberName] string? propertyName = null)
             where TField: class
         {
-            trackable.TryGetChangeTracker()?.RecordChange(field, value,  propertyName);
-            field = value?.AsTrackable();
+            var changeTracker = trackable.TryGetChangeTracker()?.RecordChange(field, value,  propertyName);
+            field = value;
+
+            if (changeTracker?.DeepTracking is true)
+                field?.AsTrackable(deepTracking: true);
         }
 
         public void SetField<TValue>(ref TrackableList<TValue>? field, List< TValue>? value, [CallerMemberName] string? propertyName = null)
@@ -73,26 +83,38 @@ public static class Extensions
             => trackable.SetField(ref field, value is null ? null : new TrackableDictionary<TKey, TValue>(value),  propertyName);
     }
 
-    extension<T>(List<T> collection)
+    extension<T>(List<T> list)
         where T : class
     {
-        public IChangeTracker? TryGetChangeTracker()
-            => collection as IChangeTracker;
-        
-        public TrackableList<T> AsTrackable()
-            => collection as TrackableList<T>
-               ?? throw new ArgumentException("The collection is not TrackableList<T>.", nameof(collection));
+        public IChangeTracker? TryGetChangeTracker() => list as IChangeTracker;
+
+        public TrackableList<T> AsTrackable(bool deepTracking = false)
+        {
+            if(list is not TrackableList<T> trackableList)
+                throw new ArgumentException("The collection is not TrackableList<T>.", nameof(list));
+
+            if (!trackableList.DeepTracking && deepTracking)
+                trackableList.UseDeepTracking();
+
+            return trackableList;
+        }
     }
     
     extension<TKey, TValue>(Dictionary<TKey, TValue> dictionary) 
         where TValue : class 
         where TKey : notnull
     {
-        public IChangeTracker? TryGetChangeTracker()
-            => dictionary as IChangeTracker;
-        
-        public TrackableDictionary<TKey, TValue> AsTrackable()
-            => dictionary as TrackableDictionary<TKey, TValue> 
-               ?? throw new ArgumentException("The collection is not TrackableDictionary<TKey,TValue>", nameof(dictionary));
+        public IChangeTracker? TryGetChangeTracker() => dictionary as IChangeTracker;
+
+        public TrackableDictionary<TKey, TValue> AsTrackable(bool deepTracking = false)
+        {
+            if (dictionary is not TrackableDictionary<TKey, TValue> trackableDictionary)
+                throw new ArgumentException("The collection is not TrackableDictionary<TKey,TValue>", nameof(dictionary));
+            
+            if (!trackableDictionary.DeepTracking && deepTracking)
+                trackableDictionary.UseDeepTracking();
+
+            return trackableDictionary;
+        }
     }
 }

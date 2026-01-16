@@ -4,10 +4,26 @@ using System.Linq;
 
 namespace Err.ChangeTracking;
 
-public class TrackableList<T> : List<T>, IChangeTracker
+public class TrackableList<T> : List<T>, ITrackableCollection
     where T : class
 {
     private bool _hasStructuralChanges;
+    
+    public bool DeepTracking { get; private set; }
+
+    public void UseDeepTracking()
+    {
+        if (DeepTracking) return;
+        
+        DeepTracking = true;
+        foreach (var item in this)
+        {
+            // Only process items that implement ITrackable
+            if(item is not ITrackable)
+                break;
+            item.AsTrackable(deepTracking: DeepTracking);
+        }
+    } 
 
     public TrackableList()
     {
@@ -26,13 +42,18 @@ public class TrackableList<T> : List<T>, IChangeTracker
             Capacity = collection.Count;
 
         foreach (var item in items)
-            base.Add(item.AsTrackable());
+            base.Add(item.AsTrackable(deepTracking: DeepTracking));
     }
 
-    public bool IsDirty(bool deepTracking = false)
+    public bool IsDirty(bool? deepTracking = null)
     {
-        return _hasStructuralChanges ||
-               this.OfType<ITrackable<T>>().Any(x => x.TryGetChangeTracker()?.IsDirty(deepTracking) ?? false);
+        if (_hasStructuralChanges) return true;
+        
+        var useDeepTracking = deepTracking ?? DeepTracking;
+        if (!useDeepTracking) return false;
+
+        return this.OfType<ITrackable<T>>()
+            .Any(x => x.TryGetChangeTracker()?.IsDirty(deepTracking: true) ?? false);
     }
 
     #region Item Access and Assignment
@@ -43,7 +64,7 @@ public class TrackableList<T> : List<T>, IChangeTracker
         set
         {
             _hasStructuralChanges = true;
-            base[index] = value.AsTrackable();
+            base[index] = value.AsTrackable(deepTracking: DeepTracking);
         }
     }
 
@@ -54,7 +75,7 @@ public class TrackableList<T> : List<T>, IChangeTracker
     public new void Add(T item)
     {
         _hasStructuralChanges = true;
-        base.Add(item.AsTrackable());
+        base.Add(item.AsTrackable(deepTracking: DeepTracking));
     }
 
     public new void AddRange(IEnumerable<T> items)
@@ -70,7 +91,7 @@ public class TrackableList<T> : List<T>, IChangeTracker
 
         // Add items efficiently
         foreach (var item in itemsArray)
-            base.Add(item.AsTrackable());
+            base.Add(item.AsTrackable(deepTracking: DeepTracking));
     }
 
     #endregion
@@ -80,13 +101,13 @@ public class TrackableList<T> : List<T>, IChangeTracker
     public new void Insert(int index, T item)
     {
         _hasStructuralChanges = true;
-        base.Insert(index, item.AsTrackable());
+        base.Insert(index, item.AsTrackable(deepTracking: DeepTracking));
     }
 
     public new void InsertRange(int index, IEnumerable<T> items)
     {
         _hasStructuralChanges = true;
-        base.InsertRange(index, items.Select(item => item.AsTrackable()));
+        base.InsertRange(index, items.Select(item => item.AsTrackable(deepTracking: DeepTracking)));
     }
 
     #endregion

@@ -141,45 +141,6 @@ internal class PropertyDisplayHelper
     }
 
     /// <summary>
-    ///     Returns the track delegate expression for use in static constructor
-    /// </summary>
-    /// <returns>Delegate expression for deep change tracking</returns>
-    public string ToDisplayDeepTrackingDelegate()
-    {
-        if (!_property.HasDeepTrackingAttribute)
-            return string.Empty;
-
-        //return $"x => x.{_property.Name} as IChangeTrackerBase ?? x.{_property.Name}?.GetChangeTracker()";
-        if (_property.IsTypeImplementsTrackable)
-            return $"x => x.{_property.Name}?.TryGetChangeTracker(),";
-        if (_property.IsTrackableCollection || _property.IsAlreadyTrackableCollection)
-            return $"x => x.{_property.Name}?.TryGetChangeTracker(),";
-
-        return string.Empty;
-    }
-
-    /// <summary>
-    ///     Returns a comment describing the property tracking status
-    /// </summary>
-    public string ToDisplayComment()
-    {
-        var sb = new StringBuilder();
-
-        if (_property.HasTrackOnlyAttribute)
-            sb.Append("This property is tracked because it has the [TrackOnly] attribute");
-        else
-            sb.Append("This property is tracked by default based on TrackingMode.All");
-
-        if (_property.HasTrackCollectionAttribute)
-            sb.Append(". Using trackable collection wrapper due to [TrackCollection] attribute");
-
-        if (_property.IsTypeImplementsTrackable)
-            sb.Append(". Property type implements ITrackable interface");
-
-        return sb.ToString();
-    }
-
-    /// <summary>
     ///     Convert an accessibility level to its string representation
     /// </summary>
     private static string GetAccessibilityString(Accessibility accessibility)

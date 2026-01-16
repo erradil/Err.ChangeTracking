@@ -5,30 +5,6 @@ namespace Err.ChangeTracking.Tests;
 public class PropertyTrackingTests
 {
     [Fact]
-    public void Property_AutoTracking_Workflow()
-    {
-        // Arrange
-        var person = new Person
-        { 
-            Addr = new Person.Address { Street = "123 Main St" } // no need to AsTrackable here, auto-tracking handles it
-        }.AsTrackable();
-        
-        var tracker = person.GetChangeTracker();
-        var addrTracker = person.Addr!.GetChangeTracker();
-        Assert.False(tracker.IsDirty());
-        Assert.False(addrTracker.IsDirty());
-        
-        // Act - Change auto-tracked property
-        person.Addr!.Street = "456 Elm St";
-        
-        // Assert - Verify tracking
-        Assert.True(addrTracker.IsDirty());
-        Assert.True(tracker.IsDirty(deepTracking:true));
-        Assert.False(tracker.HasChanged(x => x.Addr)); // this property itself isn't changed
-        Assert.True(addrTracker.HasChanged(x => x.Street));
-    }
-
-    [Fact]
     public void Property_Tracking_Workflow()
     {
         // Arrange
@@ -334,6 +310,32 @@ public class DeepTrackingTests
         Assert.True(order.Items[1].GetChangeTracker().IsDirty());
         Assert.Equal(1, order.Items[0].GetChangeTracker().GetOriginalValue(i => i.Quantity));
         Assert.Equal(20m, order.Items[1].GetChangeTracker().GetOriginalValue(i => i.UnitPrice));
+    }
+    
+    [Fact]
+    public void DeepTracking_AutoDeepTracking()
+    {
+        // Arrange
+        var person = new Person
+        { 
+            Managers = [new Person { Name = "Manager1" }], // no need to AsTrackable here, auto-tracking handles itÒ
+            Addr = new Person.Address { Street = "123 Main St" } // no need to AsTrackable here, auto-tracking handles it
+        }.AsTrackable(deepTracking: true);
+        
+        var tracker = person.GetChangeTracker();
+        var managersTracker = person.Managers!.TryGetChangeTracker();
+        Assert.False(tracker.IsDirty());
+        Assert.False(managersTracker!.IsDirty());
+        Assert.False(managersTracker!.IsDirty(deepTracking:true));
+        
+        // Act - Change auto-tracked property
+        person.Managers!.First().Name = "Manager2";
+        
+        // Assert - Verify tracking
+        Assert.False(managersTracker.IsDirty(deepTracking: false));
+        Assert.True(tracker.IsDirty(deepTracking:true));
+        Assert.False(tracker.HasChanged(x => x.Managers)); // this property itself isn't changed
+        Assert.True(managersTracker.IsDirty(deepTracking: true));
     }
 }
 

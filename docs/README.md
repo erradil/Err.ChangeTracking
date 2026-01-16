@@ -141,7 +141,7 @@ public class Order : ITrackable<Order>
     }
 }
 ```
-### Option 4: Manual with Instance Storage (High Performance)
+#### Option 4: Manual with Instance Storage (High Performance)
 For performance-critical scenarios, opt-in to instance storage rather then the default cache:
 
 ```csharp
@@ -530,11 +530,9 @@ public class Customer : ITrackable<Customer>
 
     static Customer()
     {
-        // Configure deep tracking for nested trackable objects
-        DeepTracking<Customer>.SetTrackableProperties([
-            x => x.Address?.TryGetChangeTracker(),    // Track nested Address changes
-            x => x.Orders?.TryGetChangeTracker()      // Track Orders collection changes
-        ]);
+        // Configure deep tracking for nested trackable properties
+        DeepTracking<Customer>.Track(x => x.Address); // Track nested Address changes
+        DeepTracking<Customer>.Track(x => x.Orders);  // Track Orders collection changes
     }
 
     public Address Address
