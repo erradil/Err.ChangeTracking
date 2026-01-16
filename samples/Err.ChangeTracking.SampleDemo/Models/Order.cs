@@ -31,7 +31,7 @@ public partial record Order
     public string? Notes { get; set; }
 
     // Case 7: Tracked Dictionary collection of simple types
-    [TrackCollection, DeepTracking] public partial Dictionary<string, string> Options { get; set; }
+    [TrackCollection] public partial Dictionary<string, string> Options { get; set; }
 }
 
 // Case 7: Another trackable class for order items

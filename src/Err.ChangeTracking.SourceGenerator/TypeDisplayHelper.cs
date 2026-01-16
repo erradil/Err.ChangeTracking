@@ -74,18 +74,19 @@ internal class TypeDisplayHelper
 
         sb.AppendLine($"{indent}static {_typeInfo.Name}()");
         sb.AppendLine($"{indent}{{");
-        sb.AppendLine($"{indent}    // Get all properties that are either deep trackable entities or collections");
-        sb.AppendLine(
-            $"{indent}    {Constants.Types.DeepTrackingFullName.Replace("<T>", $"<{_typeInfo.Name}>")}.SetTrackableProperties([");
+        sb.AppendLine($"{indent}    // Collect properties eligible for deep tracking: either a trackable entity or a collection of trackable elements.");
+        //sb.AppendLine($"{indent}    {Constants.Types.DeepTrackingFullName.Replace("<T>", $"<{_typeInfo.Name}>")}.SetTrackableProperties([");
 
         // Generate delegates for each trackable property
         foreach (var property in deepTrackingProperties)
-        {
-            var propertyDisplay = new PropertyDisplayHelper(property);
-            sb.AppendLine($"{indent}        {propertyDisplay.ToDisplayDeepTrackingDelegate()}");
+        { 
+            sb.AppendLine($"{indent}    {Constants.Types.DeepTrackingFullName.Replace("<T>", $"<{_typeInfo.Name}>")}.Track(e => e.{property.Name});");
+
+            //var propertyDisplay = new PropertyDisplayHelper(property);
+            //sb.AppendLine($"{indent}        {propertyDisplay.ToDisplayDeepTrackingDelegate()}");
         }
 
-        sb.AppendLine($"{indent}    ]);");
+        //sb.AppendLine($"{indent}    ]);");
         sb.AppendLine($"{indent}}}");
 
         return sb.ToString();

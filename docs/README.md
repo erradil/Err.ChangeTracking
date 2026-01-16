@@ -141,7 +141,7 @@ public class Order : ITrackable<Order>
     }
 }
 ```
-### Option 4: Manual with Instance Storage (High Performance)
+#### Option 4: Manual with Instance Storage (High Performance)
 For performance-critical scenarios, opt-in to instance storage rather then the default cache:
 
 ```csharp

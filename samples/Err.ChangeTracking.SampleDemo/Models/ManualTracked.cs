@@ -24,10 +24,12 @@ public class Model : ITrackable<Model>, IAttachedTracker<Model>
     {
         // Register all trackable properties for deep change tracking
         // Deep tracking automatically monitors changes in nested entities and collections
-        DeepTracking<Model>.SetTrackableProperties([
-            x => x.SubModel?.TryGetChangeTracker(),    // Track changes in nested trackable entity
-            x => x.Items?.TryGetChangeTracker()        // Track changes in trackable collection (add/remove/modify items)
-        ]);
+        // DeepTracking<Model>.SetTrackableProperties([
+        //     x => x.SubModel?.TryGetChangeTracker(),    // Track changes in nested trackable entity
+        //     x => x.Items?.TryGetChangeTracker()        // Track changes in trackable collection (add/remove/modify items)
+        // ]);
+        
+        DeepTracking<Model>.Track(x => x.SubModel);
     }
     
     /// <summary>
