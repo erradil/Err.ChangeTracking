@@ -28,7 +28,10 @@ public class Analyzer : DiagnosticAnalyzer
         Rules.ConflictingAttributes,
 
         // CRITICAL RULE 5: Properties must have setters to be trackable
-        Rules.NoSetterOnTrackedProperty
+        Rules.NoSetterOnTrackedProperty,
+
+        // CRITICAL RULE 6: [DeepTracking] must only be applied to trackable types
+        Rules.DeepTrackingOnNonTrackable
     ];
 
     public override void Initialize(AnalysisContext context)
@@ -121,6 +124,16 @@ public class Analyzer : DiagnosticAnalyzer
             if (!isCollection)
                 context.ReportDiagnostic(Diagnostic.Create(
                     Rules.TrackCollectionOnNonCollection,
+                    propertyDeclaration.Identifier.GetLocation(),
+                    propertyHelper.Name));
+        }
+
+        // CRITICAL RULE 6: Check if DeepTracking is applied to a non-trackable type
+        if (propertyHelper.HasDeepTrackingAttribute)
+        {
+            if (!propertyHelper.IsValidForDeepTracking())
+                context.ReportDiagnostic(Diagnostic.Create(
+                    Rules.DeepTrackingOnNonTrackable,
                     propertyDeclaration.Identifier.GetLocation(),
                     propertyHelper.Name));
         }

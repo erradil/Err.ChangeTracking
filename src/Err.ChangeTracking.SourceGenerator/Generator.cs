@@ -20,7 +20,7 @@ public class ChangeTrackerGenerator : IIncrementalGenerator
         var trackableTypes =
             context.SyntaxProvider
                 .ForAttributeWithMetadataName(
-                    Constants.Types.TrackableAttributeFullName,
+                    Constants.Attributes.TrackableAttributeFullName,
                     static (node, _) =>
                         node is TypeDeclarationSyntax typeDecl && HasPartialModifier(typeDecl),
                     static (ctx, _) => ExtractTypeInfo(ctx))

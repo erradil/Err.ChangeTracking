@@ -112,7 +112,7 @@ internal class TypeHelper
     public TrackingMode GetTrackingMode()
     {
         foreach (var attribute in _typeSymbol.GetAttributes())
-            if (attribute.AttributeClass?.ToDisplayString() == Constants.Types.TrackableAttributeFullName)
+            if (attribute.AttributeClass?.ToDisplayString() == Constants.Attributes.TrackableAttributeFullName)
             {
                 // Check named arguments
                 if (attribute.NamedArguments.FirstOrDefault(kvp => kvp.Key == nameof(TrackableAttribute.Mode)).Value

@@ -103,22 +103,22 @@ internal class PropertyHelper(IPropertySymbol propertySymbol)
     /// <summary>
     ///     Check if the property has [TrackOnly] attribute
     /// </summary>
-    public bool HasTrackOnlyAttribute => HasAttribute(Constants.Types.TrackOnlyAttributeFullName);
+    public bool HasTrackOnlyAttribute => HasAttribute(Constants.Attributes.TrackOnlyAttributeFullName);
 
     /// <summary>
     ///     Check if the property has [NotTracked] attribute
     /// </summary>
-    public bool HasNotTrackedAttribute => HasAttribute(Constants.Types.NotTrackedAttributeFullName);
+    public bool HasNotTrackedAttribute => HasAttribute(Constants.Attributes.NotTrackedAttributeFullName);
 
     /// <summary>
     ///     Check if the property has [TrackCollection] attribute
     /// </summary>
-    public bool HasTrackCollectionAttribute => HasAttribute(Constants.Types.TrackCollectionAttributeFullName);
+    public bool HasTrackCollectionAttribute => HasAttribute(Constants.Attributes.TrackCollectionAttributeFullName);
 
     /// <summary>
     ///     Check if the property has [DeepTracking] attribute
     /// </summary>
-    public bool HasDeepTrackingAttribute => HasAttribute(Constants.Types.DeepTrackingAttributeFullName);
+    public bool HasDeepTrackingAttribute => HasAttribute(Constants.Attributes.DeepTrackingAttributeFullName);
 
 
     /// <summary>
@@ -152,7 +152,7 @@ internal class PropertyHelper(IPropertySymbol propertySymbol)
             return (false, null);
 
         // Check if the property has a TrackCollectionAttribute
-        var isTrackableCollection = HasAttribute(Constants.Types.TrackCollectionAttributeFullName);
+        var isTrackableCollection = HasAttribute(Constants.Attributes.TrackCollectionAttributeFullName);
         if (!isTrackableCollection)
             return (false, null);
 
@@ -175,6 +175,52 @@ internal class PropertyHelper(IPropertySymbol propertySymbol)
         _propertySymbol.Type is INamedTypeSymbol namedType &&
         (ImplementsInterface(namedType, Constants.Types.IAttachedTrackerFullName)
          || HasTrackableAttribute(namedType));
+
+    /// <summary>
+    ///     Check if the property type is valid for [DeepTracking] attribute.
+    ///     Valid types are:
+    ///     - ITrackable&lt;TEntity&gt; implementations
+    ///     - List&lt;TItem&gt; where TItem implements ITrackable&lt;TItem&gt;
+    ///     - Dictionary&lt;TKey, TValue&gt; where TValue implements ITrackable&lt;TValue&gt;
+    /// </summary>
+    public bool IsValidForDeepTracking()
+    {
+        if (_propertySymbol.Type is not INamedTypeSymbol namedType)
+            return false;
+
+        // Check if type directly implements ITrackable<T> or has [Trackable] attribute
+        if (ImplementsInterface(namedType, Constants.Types.IAttachedTrackerFullName)
+            || HasTrackableAttribute(namedType))
+            return true;
+
+        var typeName = namedType.OriginalDefinition.ToDisplayString();
+
+        // Check if it's a List<T> where T is trackable
+        if (typeName == "System.Collections.Generic.List<T>")
+        {
+            if (namedType.TypeArguments.Length > 0 &&
+                namedType.TypeArguments[0] is INamedTypeSymbol itemType)
+            {
+                return ImplementsInterface(itemType, Constants.Types.ITrackableFullName)
+                       || ImplementsInterface(itemType, Constants.Types.ITrackableCollectionFullName)
+                       || HasTrackableAttribute(itemType);
+            }
+        }
+
+        // Check if it's a Dictionary<TKey, TValue> where TValue is trackable
+        if (typeName == "System.Collections.Generic.Dictionary<TKey, TValue>")
+        {
+            if (namedType.TypeArguments.Length > 1 &&
+                namedType.TypeArguments[1] is INamedTypeSymbol valueType)
+            {
+                return ImplementsInterface(valueType, Constants.Types.ITrackableFullName)
+                       || ImplementsInterface(valueType, Constants.Types.ITrackableCollectionFullName)
+                       || HasTrackableAttribute(valueType);
+            }
+        }
+
+        return false;
+    }
 
     /// <summary>
     ///     Check if the property is of a specific type
@@ -309,7 +355,7 @@ internal class PropertyHelper(IPropertySymbol propertySymbol)
     public static bool HasTrackableAttribute(INamedTypeSymbol typeSymbol)
     {
         foreach (var attribute in typeSymbol.GetAttributes())
-            if (attribute.AttributeClass?.ToDisplayString() == Constants.Types.TrackableAttributeFullName)
+            if (attribute.AttributeClass?.ToDisplayString() == Constants.Attributes.TrackableAttributeFullName)
                 return true;
 
         return false;
@@ -321,7 +367,7 @@ internal class PropertyHelper(IPropertySymbol propertySymbol)
     public static TrackingMode GetTrackingMode(INamedTypeSymbol typeSymbol)
     {
         foreach (var attribute in typeSymbol.GetAttributes())
-            if (attribute.AttributeClass?.ToDisplayString() == Constants.Types.TrackableAttributeFullName)
+            if (attribute.AttributeClass?.ToDisplayString() == Constants.Attributes.TrackableAttributeFullName)
             {
                 // Check named arguments
                 if (attribute.NamedArguments.FirstOrDefault(kvp => kvp.Key == nameof(TrackableAttribute.Mode)).Value

@@ -10,6 +10,7 @@ public static class Rules
     private const string TrackCollectionOnNonCollectionId = "ERRTRACK003";
     private const string ConflictingAttributesId = "ERRTRACK004";
     private const string NoSetterOnTrackedPropertyId = "ERRTRACK005";
+    private const string DeepTrackingOnNonTrackableId = "ERRTRACK006";
 
     // CRITICAL RULE 1: Classes with [Trackable] must be partial
     public static readonly DiagnosticDescriptor TrackableNotPartial = new(
@@ -60,4 +61,14 @@ public static class Rules
         DiagnosticSeverity.Error,
         true,
         "Property marked for tracking has no setter. Changes cannot be tracked.");
+
+    // CRITICAL RULE 6: [DeepTracking] must only be applied to trackable types
+    public static readonly DiagnosticDescriptor DeepTrackingOnNonTrackable = new(
+        DeepTrackingOnNonTrackableId,
+        "DeepTracking applied to non-trackable property",
+        "Property '{0}' is marked with [DeepTracking] but its type is not trackable. Only types that implement ITrackable<T>, or List<T>/Dictionary<TKey,TValue> where T/TValue implements ITrackable<T>.",
+        "Err.ChangeTracking",
+        DiagnosticSeverity.Error,
+        true,
+        "[DeepTracking] attribute can only be applied to properties of types that implement ITrackable<T>, or List<T>/Dictionary<TKey,TValue> where T/TValue implements ITrackable<T>.");
 }
